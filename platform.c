@@ -36,6 +36,7 @@
 #include <ti/display/Display.h>
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/SPI.h>
+#include <ti/drivers/Timer.h>
 
 // TI-Driver includes
 #include "ti_drivers_config.h"
@@ -348,6 +349,11 @@ void mainThread(void *pvParameters)
 
     /* led on */
     GPIO_write(Status_LED_1,0);
+
+    Timer_Handle SyncTimer;
+    /* SyncTimer */
+    SyncTimer = Sync_Init();
+    Timer_start(SyncTimer);
 
     /* Start the SimpleLink Host */
     pthread_attr_init(&pAttrs_spawn);

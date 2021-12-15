@@ -15,4 +15,5 @@
 	<templateProperties value="id=NanoEEG_CC3235S_tirtos_ccs.projectspec.NanoEEG_CC3235S_tirtos_ccs,buildProfile=release,isHybrid=true"/>
 	<origin value="C:\ti\simplelink_cc32xx_sdk_5_30_00_08\examples\rtos\CC3235S_LAUNCHXL\ns\tcpecho\tirtos\ccs\tcpecho_CC3235S_LAUNCHXL_tirtos_ccs.projectspec"/>
 	<filesToOpen value=""/>
+	<isTargetManual value="false"/>
 </projectOptions>
