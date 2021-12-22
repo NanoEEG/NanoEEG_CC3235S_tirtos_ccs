@@ -42,13 +42,13 @@ NETParam_t networkparam;
 uint8_t samplenum = UDP_SAMPLENUM;
 
 /* 采样参数 */
-static uint32_t curSamprate = SPS_250;
-static const uint32_t samplerate_tbl[]={SPS_250,SPS_500,SPS_1K,SPS_2K,SPS_4K};
-static uint32_t cur_gain = GAIN_X24;
-static const uint32_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,,GAIN_X6,GAIN_X8,GAIN_X24};
+static uint16_t curSamprate = SPS_250;
+static const uint16_t samplerate_tbl[]={SPS_250,SPS_500,SPS_1K,SPS_2K,SPS_4K};
+static uint8_t cur_gain = GAIN_X24;
+static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
 
 /* 事件触发 */
-
+static uint16_t trig_delay;
 /************************************************************************
  *  Attribute  Table
  */
@@ -93,7 +93,7 @@ const AttrTbl_t attr_tbl = {
                             (uint32_t*)&impMeas_mode
                            },
 
-        //!< 逐通道阻抗值 
+        //!< 逐通道阻抗值
         .IMPValue       = { ATTR_RW,
                             ATTR_MSG,
                             sizeof(impMeasval), //TODO
@@ -137,7 +137,7 @@ const AttrTbl_t attr_tbl = {
                             (uint32_t*)&netparam.EvtdataPort,
                             },
     
-    /*  ======================== 采样参数 ============================== */                            
+    /*  ======================== 采样参数 ============================== */
 
         //!< 支持的采样率挡位
         .Samplerate_tbl = { ATTR_RO,
@@ -149,7 +149,7 @@ const AttrTbl_t attr_tbl = {
         //!< 当前全局采样率
         .CurSamplerate  = { ATTR_RW,
                             ATTR_CONFIG,
-                            1,
+                            2,
                             (uint32_t*)&curSamprate
                             },
 
@@ -167,9 +167,9 @@ const AttrTbl_t attr_tbl = {
                             (uint32_t*)&cur_gain
                             },     
 
-   /*  ======================== 事件触发 ============================== */    
+   /*  ======================== 事件触发 ============================== */
         
-        //!< 外触发信号延迟时间
+        //!< 外触发信号延迟时间 us
         .Trig_delay     = { ATTR_RW,
                             ATTR_CONFIG,
                             1,

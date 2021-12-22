@@ -1,55 +1,39 @@
-#ifndef __PROTOCOL_WIFI_H__
-#define __PROTOCOL_WIFI_H__
+#ifndef __EEGDATA_PROTOCOL_H
+#define __EEGDATA_PROTOCOL_H
 
 /*********************************************************************
  * INCLUDES
  */
 #include <string.h>
 #include <stdint.h>
-#include <service/NanoEEG_misc.h>
 
 /*********************************************************************
  * Macros
  */
-/* TCP¿ØÖÆÍ¨µÀ²ÎÊı */
+/* è„‘ç”µæ•°æ®é€šé“å‚æ•°*/
+#define UDP_SAMPLE_FH               0x23    //!< UDPå¸§æ•°æ®åŸŸ æ ·èµ·å§‹åˆ†éš”ç¬¦
+#define UDP_SAMPLENUM               10      //!< UDPæ¯åŒ…å«adæ ·æœ¬æ•°
 
-// ÉÏÎ»»ú->Éè±¸ Ö¸Áî½âÎö
-#define TCP_Recv_FH                 0xAC    //!< TCP½ÓÊÕÖ¡Í·
-#define TCP_Recv_FT                 0xCC    //!< TCP½ÓÊÕÖ¡Î²
-// Éè±¸->ÉÏÎ»»ú »Ø¸´
-#define TCP_Send_FH                 0xA2    //!< TCP·¢ËÍÖ¡Í·
-#define TCP_Send_FT                 0xC2    //!< TCP·¢ËÍÖ¡Î²
-// Ö¸ÁîÂë
-#define DummyIns                    0x00    //!< ¿ÕÖ¸Áî
-#define CAttr_Read                  0x01    //!< ¶ÁÒ»¸öÆÕÍ¨ÊôĞÔ
-#define CAttr_Write                 0x10    //!< Ğ´Ò»¸öÆÕÍ¨ÊôĞÔ
-#define ChxAttr_Read                0x02    //!< ¶ÁÒ»¸öÍ¨µÀÊôĞÔ
-#define ChxAttr_Write               0x20    //!< Ğ´Ò»¸öÍ¨µÀÊôĞÔ
-
-// Í¨Ñ¶ÊÕ·¢»º³åÇø²ÎÊı
-#define TCP_Rx_Buff_Size            16
-#define TCP_Tx_Buff_Size            16
-
-/* UDPÊı¾İÍ¨µÀ²ÎÊı*/
-#define UDP_SAMPLE_FH               0x23    //!< UDPÖ¡Êı¾İÓò ÑùÆğÊ¼·Ö¸ô·û
-#define UDP_SAMPLENUM               10      //!< UDPÃ¿°üº¬adÑù±¾Êı
-
-// Í¨Ñ¶·¢ËÍ»º³åÇø²ÎÊı
+// å‘é€ç¼“å†²åŒºå‚æ•°
 #ifdef Dev_Ch32
-#define UDP_Tx_Buff_Size            1173    //!< Êı¾İÖ¡Í·²¿23 + Ñù±¾Êı10 x£¨Êı¾İÓòÍ·²¿7 + (±¾×éÍ¨µÀ×´Ì¬3 + °ËÍ¨µÀ8 x Ã¿Í¨µÀÁ¿»¯×Ö½ÚÊı3£©x Í¨µÀ×éÊı4)×Ö½Ú
-#define UDP_SampleValSize           108     //!< Í¨µÀ×éÊı4 - 108×Ö½Ú×´Ì¬+Á¿»¯Öµ
+#define UDP_DTx_Buff_Size           1173    //!< æ•°æ®å¸§å¤´éƒ¨23 + æ ·æœ¬æ•°10 xï¼ˆæ•°æ®åŸŸå¤´éƒ¨7 + (æœ¬ç»„é€šé“çŠ¶æ€3 + å…«é€šé“8 x æ¯é€šé“é‡åŒ–å­—èŠ‚æ•°3ï¼‰x é€šé“ç»„æ•°4)å­—èŠ‚
+#define UDP_SampleValSize           108     //!< é€šé“ç»„æ•°4 - 108å­—èŠ‚çŠ¶æ€+é‡åŒ–å€¼
+#define CHANNEL_NUM                 32      //!< é€šé“æ•°é‡  ï¼ˆx8/x16/x24/x32ï¼‰
 #endif
 #ifdef Dev_Ch24
-#define UDP_Tx_Buff_Size            903     //!< Êı¾İÖ¡Í·²¿23 + Ñù±¾Êı10 x£¨Êı¾İÓòÍ·²¿7 + (±¾×éÍ¨µÀ×´Ì¬3 + °ËÍ¨µÀ8 x Ã¿Í¨µÀÁ¿»¯×Ö½ÚÊı3£©x Í¨µÀ×éÊı3)×Ö½Ú
-#define UDP_SampleValSize           81      //!< Í¨µÀ×éÊı3 - 81×Ö½Ú×´Ì¬+Á¿»¯Öµ
+#define UDP_DTx_Buff_Size           903     //!< æ•°æ®å¸§å¤´éƒ¨23 + æ ·æœ¬æ•°10 xï¼ˆæ•°æ®åŸŸå¤´éƒ¨7 + (æœ¬ç»„é€šé“çŠ¶æ€3 + å…«é€šé“8 x æ¯é€šé“é‡åŒ–å­—èŠ‚æ•°3ï¼‰x é€šé“ç»„æ•°3)å­—èŠ‚
+#define UDP_SampleValSize           81      //!< é€šé“ç»„æ•°3 - 81å­—èŠ‚çŠ¶æ€+é‡åŒ–å€¼
+#define CHANNEL_NUM                 24      //!< é€šé“æ•°é‡  ï¼ˆx8/x16/x24/x32ï¼‰
 #endif
 #ifdef Dev_Ch16
-#define UDP_Tx_Buff_Size            633     //!< Êı¾İÖ¡Í·²¿23 + Ñù±¾Êı10 x£¨Êı¾İÓòÍ·²¿7 + (±¾×éÍ¨µÀ×´Ì¬3 + °ËÍ¨µÀ8 x Ã¿Í¨µÀÁ¿»¯×Ö½ÚÊı3£©x Í¨µÀ×éÊı2)×Ö½Ú
-#define UDP_SampleValSize           54      //!< Í¨µÀ×éÊı2 - 51×Ö½Ú×´Ì¬+Á¿»¯Öµ
+#define UDP_DTx_Buff_Size           633     //!< æ•°æ®å¸§å¤´éƒ¨23 + æ ·æœ¬æ•°10 xï¼ˆæ•°æ®åŸŸå¤´éƒ¨7 + (æœ¬ç»„é€šé“çŠ¶æ€3 + å…«é€šé“8 x æ¯é€šé“é‡åŒ–å­—èŠ‚æ•°3ï¼‰x é€šé“ç»„æ•°2)å­—èŠ‚
+#define UDP_SampleValSize           54      //!< é€šé“ç»„æ•°2 - 51å­—èŠ‚çŠ¶æ€+é‡åŒ–å€¼
+#define CHANNEL_NUM                 16      //!< é€šé“æ•°é‡  ï¼ˆx8/x16/x24/x32ï¼‰
 #endif
 #ifdef Dev_Ch8
-#define UDP_Tx_Buff_Size            363     //!< Êı¾İÖ¡Í·²¿23 + Ñù±¾Êı10 x£¨Êı¾İÓòÍ·²¿7 + (±¾×éÍ¨µÀ×´Ì¬3 + °ËÍ¨µÀ8 x Ã¿Í¨µÀÁ¿»¯×Ö½ÚÊı3£©x Í¨µÀ×éÊı1)×Ö½Ú
-#define UDP_SampleValSize           27      //!< Í¨µÀ×éÊı1 - 27×Ö½Ú×´Ì¬+Á¿»¯Öµ
+#define UDP_DTx_Buff_Size           363     //!< æ•°æ®å¸§å¤´éƒ¨23 + æ ·æœ¬æ•°10 xï¼ˆæ•°æ®åŸŸå¤´éƒ¨7 + (æœ¬ç»„é€šé“çŠ¶æ€3 + å…«é€šé“8 x æ¯é€šé“é‡åŒ–å­—èŠ‚æ•°3ï¼‰x é€šé“ç»„æ•°1)å­—èŠ‚
+#define UDP_SampleValSize           27      //!< é€šé“ç»„æ•°1 - 27å­—èŠ‚çŠ¶æ€+é‡åŒ–å€¼
+#define CHANNEL_NUM                 8      //!< é€šé“æ•°é‡  ï¼ˆx8/x16/x24/x32ï¼‰
 #endif
 
 /*******************************************************************
@@ -57,94 +41,30 @@
  */
 
 /*!
- *  @def    ÉùÃ÷ ¶ÁÊôĞÔ»Øµ÷º¯ÊıÔ­ĞÍ
- *  @param  InsAttrNum - ´ı¶ÁÊôĞÔ±àºÅ
- *          CHxNum - Í¨µÀ±àºÅ£¨Í¨µÀÊôĞÔ×¨ÓÃ£¬Ä¬ÈÏ²»ÓÃ   0xFF£©
- *          pValue - ÊôĞÔÖµ £¨to be returned£©
- *          pLen - ÊôĞÔÖµ´óĞ¡£¨to be returned£©
- */
-typedef uint8_t (*pfnReadAttrCB_t)( uint8_t InsAttrNum, uint8_t CHxNum,
-                                    uint8_t *pValue, uint8_t *pLen );
-
-/*!
- *  @def    ÉùÃ÷ Ğ´ÊôĞÔ»Øµ÷º¯ÊıÔ­ĞÍ
- *  @param  InsAttrNum - ´ıĞ´ÈëÊôĞÔ±àºÅ
- *          CHxNum - Í¨µÀ±àºÅ£¨Í¨µÀÊôĞÔ×¨ÓÃ£¬Ä¬ÈÏ²»ÓÃ   0xFF£©
- *          pValue - ´ıĞ´ÈëÊı¾İµÄÖ¸Õë
- *          pLen - ´ıĞ´ÈëÊı¾İ´óĞ¡
- */
-typedef uint8_t (*pfnWriteAttrCB_t)( uint8_t InsAttrNum, uint8_t CHxNum,
-                                     uint8_t *pValue, uint8_t len );
-
-/*!
- *  @def    ÊôĞÔ¶ÁĞ´»Øµ÷º¯Êı ½á¹¹Ìå
+    \brief  UDPæ•°æ®é€šé“ æ•°æ®å¸§æ•°æ®åŸŸç»“æ„ä½“ - ä¸€ä¸ªé€šé“ç»„ï¼ˆ8é€šé“ï¼‰
+            æœ¬ç»“æ„ä½“å®šä¹‰UDPæ•°æ®é€šé“ æ•°æ®å¸§æ•°æ®åŸŸæ ¼å¼
  */
 typedef struct
 {
-  pfnReadAttrCB_t   pfnReadAttrCB;                  //!< ¶ÁÊôĞÔ»Øµ÷º¯ÊıÖ¸Õë
-  pfnWriteAttrCB_t  pfnWriteAttrCB;                 //!< Ğ´ÊôĞÔ»Øµ÷º¯ÊıÖ¸Õë
-} AttrCBs_t;
-
-/*!
- *  @def    TCP¿ØÖÆÍ¨µÀÖ¡ ½á¹¹Ìå
- *
- *  @brief  ±¾½á¹¹Ìå¶¨ÒåTCP¿ØÖÆÍ¨µÀÒ»´ÎÖ¡ÊÕ·¢µÄÊı¾İ
- */
- typedef struct
-{
-    uint8_t FrameHeader;    //!< Ö¡Í·
-    uint8_t FrameLength;    //!< ÓĞĞ§Ö¡³¤
-    uint8_t DataLength;     //!< Êı¾İÖ¡³¤
-    uint8_t InsNum;         //!< Ö¸ÁîÂë
-    uint8_t InsAttrNum;     //!< Ö¸Áî×÷ÓÃÊôĞÔ±àºÅ
-    uint8_t ChxNum;         //!< Ö¸Áî×÷ÓÃÍ¨µÀ
-    uint8_t ERR_NUM;        //!< ´íÎóÂë
-    uint8_t *pDataLength;   //!< Êı¾İÖ¡³¤Ö¸Õë£¨¶Á»Øµ÷ÓÃ£©
-    uint8_t *_OP_;          //!< ²Ù×÷Á¢¼´ÊıÖ¸Õë£¨Ğ´»Øµ÷ÓÃ£©
-} TCPFrame_t;
-
-/*!
- *  @def    UDPÖ¡Í·Êı¾İ ½á¹¹Ìå
- *
- *  @brief  £¡±¾½á¹¹ÌåÄÚÊı¾İĞèÍ¨¹ıÊôĞÔ±í»ñÈ¡
- */
- typedef struct
-{
-     uint8_t  DevID[4];             //!< Éè±¸ID
-     uint8_t  UDPNum[4];            //!< UDP°üÀÛ¼Ó¹ö¶¯Âë
-     uint8_t  UDPSampleNum[2];      //!< ±¾UDP°ü×ÜÑùÊı
-     uint8_t  UDP_ChannelNum;       //!< ±¾UDP°üÓĞĞ§Í¨µÀ×ÜÊı
-     uint8_t  UNIXTimeStamp[8];     //!< UnixÊ±¼ä´Á£¨Î´ÓÃ£©
-     uint8_t  ReservedNum[4];       //!< ±£ÁôÊı
-} UDPHeader_t;
-
-/*!
- *  @def    UDPÊı¾İÍ¨µÀ Êı¾İÖ¡Êı¾İÓò½á¹¹Ìå - Ò»¸öÍ¨µÀ×é£¨8Í¨µÀ£©
- *
- *  @brief  ±¾½á¹¹Ìå¶¨ÒåUDPÊı¾İÍ¨µÀ Êı¾İÖ¡Êı¾İÓò¸ñÊ½
- */
-typedef struct
-{
-    uint8_t     FrameHeader;                        //!< ÆğÊ¼·Ö¸ô·û
-    uint8_t     Index[2];                           //!< Ñù±¾ĞòºÅ
-    uint8_t     Timestamp[4];                       //!< ±¾Ñù±¾Ê±¼ä´Á
-    uint8_t     ChannelVal[UDP_SampleValSize];      //!< 8Í¨µÀ×´Ì¬+Á¿»¯Öµ
+    uint8_t     FrameHeader;                        //!< èµ·å§‹åˆ†éš”ç¬¦
+    uint8_t     Index[2];                           //!< æ ·æœ¬åºå·
+    uint8_t     Timestamp[4];                       //!< æœ¬æ ·æœ¬æ—¶é—´æˆ³
+    uint8_t     ChannelVal[UDP_SampleValSize];      //!< 8é€šé“çŠ¶æ€+é‡åŒ–å€¼
 }UDPData_t;
 
 /*!
- *  @def    UDPÊı¾İÍ¨µÀ·¢ËÍ»º³åÇø ÁªºÏÌå
- *
- *  @brief  ±¾ÁªºÏÌå¶¨ÒåUDPÊı¾İÍ¨µÀµÄ·¢ËÍ»º³åÇøÖ¡¸ñÊ½
+    \brief    UDPæ•°æ®é€šé“å‘é€ç¼“å†²åŒº è”åˆä½“
+              æœ¬è”åˆä½“å®šä¹‰UDPè„‘ç”µæ•°æ®é€šé“çš„å‘é€ç¼“å†²åŒºå¸§æ ¼å¼
  */
 typedef //union
 //{
-   //uint8_t UDP_Tx_Buff[UDP_Tx_Buff_Size];
+   //uint8_t UDP_Tx_Buff[UDP_DTx_Buff_Size];
    struct
    {
-       /* Êı¾İÖ¡Í·²¿     - 23×Ö½Ú*/
+       /* æ•°æ®å¸§å¤´éƒ¨     - 23å­—èŠ‚*/
        UDPHeader_t sampleheader;
 
-       /*Êı¾İÖ¡Êı¾İÓò  */
+       /* æ•°æ®å¸§æ•°æ®åŸŸ */
        UDPData_t sampledata[UDP_SAMPLENUM];
 
    //} UDPframe;
@@ -153,12 +73,8 @@ typedef //union
 /**********************************************************************
  * FUNCTIONS
  */
-void TCP_ProcessFSMInit(void);
-bool TCP_ProcessFSM(uint8_t *pdata);
 
 bool UDP_DataGet(uint8_t SampleIndex,uint8_t Procesflag);
 bool UDP_DataProcess(SampleTime_t *pSampleTime,uint8_t Procesflag);
 
-bool protocol_RegisterAttrCBs(AttrCBs_t *pAttrcallbacks);
-
-#endif  /* __PROTOCOL_WIFI_H__ */
+#endif  /* __EEGDATA_PROTOCOL_H */

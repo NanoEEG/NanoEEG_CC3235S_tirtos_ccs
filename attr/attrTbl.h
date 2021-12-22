@@ -57,19 +57,6 @@
 #define IMPMES_START                    1           //!< 开始阻抗检测
 #define IMPMES_STOP                     0           //!< 停止阻抗检测
 
-#ifdef Dev_Ch32
-#define CHANNEL_NUM                     32          //!< 通道数量  （x8/x16/x24/x32）
-#endif
-#ifdef Dev_Ch24
-#define CHANNEL_NUM                     24          //!< 通道数量  （x8/x16/x24/x32）
-#endif
-#ifdef Dev_Ch16
-#define CHANNEL_NUM                     16          //!< 通道数量  （x8/x16/x24/x32）
-#endif
-#ifdef Dev_Ch8
-#define CHANNEL_NUM                     8           //!< 通道数量  （x8/x16/x24/x32）
-#endif
-
 /*******************************************************************
  * TYPEDEFS
  */
