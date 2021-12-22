@@ -4,7 +4,7 @@
 /*******************************************************************
  * CONSTANTS
  */
-#define APPLICATION_NAME                      ("Nano EEG")
+#define APPLICATION_NAME                      ("NanoEEG")
 #define APPLICATION_VERSION                   ("1.0.0")
 #define DEVICE_ERROR                          ("Device error, please refer \"DEVICE ERRORS CODES\" section in errors.h")
 #define WLAN_ERROR                            ("WLAN error, please refer \"WLAN ERRORS CODES\" section in errors.h")
@@ -20,15 +20,16 @@
 #define SLNET_IF_WIFI_PRIO                    (5)
 #define SLNET_IF_WIFI_NAME                    "CC3235S"
 
-//!< 路由参数
-#define SSID_NAME                             "TUNERL3092"              /* AP SSID */
+//!< Router Param
+#define SSID_NAME                             "TUNERL-306"              /* AP SSID */
 #define SECURITY_TYPE                         SL_WLAN_SEC_TYPE_WPA_WPA2 /* Security type could be SL_WLAN_SEC_TYPE_OPEN */
-#define SECURITY_KEY                          "TUNERL2020"              /* Password of the secured AP */
+#define SECURITY_KEY                          "TUNERL2021"              /* Password of the secured AP */
 
-//!< Socket参数
-#define TCPPORT                               (7001)                    /* TCP控制通道端口号 */
-#define UDP1PORT                              (7002)                    /* UDP数据通道端口号 */
-#define UDP2PORT                              (7002)                    /* UDP标签通道端口号 */
+//!< Socket Param
+#define TCPPORT                               (7001)                    
+#define UDP1PORT                              (7002)    // for eeg data                     
+#define UDP2PORT                              (7003)    // for event data                    
+
 /*******************************************************************
  * TYPEDEFS
  */

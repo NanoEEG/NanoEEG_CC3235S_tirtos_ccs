@@ -31,7 +31,7 @@
  */
 
 /*
- *    ======== tcpEcho.c ========
+ *    ======== tcp_task.c ========
  *    Contains BSD sockets code.
  */
 

@@ -23,7 +23,7 @@ const GPIO4          = GPIO.addInstance();
 const GPIO5          = GPIO.addInstance();
 const GPIO6          = GPIO.addInstance();
 const GPIO7          = GPIO.addInstance();
-const GPIO10         = GPIO.addInstance();
+const GPIO8          = GPIO.addInstance();
 const I2C            = scripting.addModule("/ti/drivers/I2C", {}, false);
 const I2C1           = I2C.addInstance();
 const Power          = scripting.addModule("/ti/drivers/Power");
@@ -94,9 +94,9 @@ GPIO7.$name           = "CC1310_Sync_PWM";
 GPIO7.mode            = "Output";
 GPIO7.gpioPin.$assign = "ball.4";
 
-GPIO10.$name            = "CC1310_WAKEUP";
-GPIO10.interruptTrigger = "Falling Edge";
-GPIO10.gpioPin.$assign  = "ball.50";
+GPIO8.$name            = "CC1310_WAKEUP";
+GPIO8.interruptTrigger = "Falling Edge";
+GPIO8.gpioPin.$assign  = "ball.50";
 
 I2C1.$name = "CONFIG_I2C_0";
 
@@ -124,13 +124,11 @@ Timer2.interruptPriority = "4";
 Watchdog1.$name            = "CONFIG_WATCHDOG_0";
 Watchdog1.watchdog.$assign = "WATCHDOG0";
 
-LED1.$name                      = "Status_LED_1";
-LED1.ledPin.$assign             = "ball.61";
-LED1.gpioPin.initialOutputState = "High";
+LED1.$name          = "LED_RED";
+LED1.ledPin.$assign = "ball.61";
 
-LED2.$name                      = "Status_LED_2";
-LED2.ledPin.$assign             = "ball.63";
-LED2.gpioPin.initialOutputState = "High";
+LED2.$name          = "LED_GREEN";
+LED2.ledPin.$assign = "ball.63";
 
 net_utils1.$name = "CONFIG_NET_UTILS_0";
 

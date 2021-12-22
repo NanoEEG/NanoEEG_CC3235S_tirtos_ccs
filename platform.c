@@ -30,6 +30,10 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/********************************************************************************
+ *  INCLUDES
+ */
+// TI-Driver includes
 #include <ti/drivers/net/wifi/simplelink.h>
 #include <ti/drivers/net/wifi/slnetifwifi.h>
 
@@ -38,32 +42,49 @@
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/Timer.h>
 
-// TI-Driver includes
 #include "ti_drivers_config.h"
+
+// POSIX Header files
+#include <mqueue.h>
+#include <semaphore.h>
 #include "pthread.h"
 
 // User Services & tasks
 #include "platform.h"
+#include <attr/attrTbl.h>
 
-pthread_t tcpThread = (pthread_t)NULL;
+/********************************************************************************
+ *  GLOBAL VARIABLES
+ */
+int32_t   mode;
+
+// Thread Object
 pthread_t spawn_thread = (pthread_t)NULL;
+pthread_t tcpThread = (pthread_t)NULL;
 pthread_t tcpworker_thread = (pthread_t)NULL;
-int32_t             mode;
+pthread_t udp1Thread = (pthread_t)NULL;
+pthread_t udp2Thread = (pthread_t)NULL;
+
+//!< Driver handle
 Display_Handle display;
 
+/********************************************************************************
+ *  EXTERNAL VARIABLES
+ */
 extern void tcpHandler(uint32_t arg0, uint32_t arg1);
 extern void tcpWorker(uint32_t arg0, uint32_t arg1);
+extern void udp1Worker(uint32_t arg0, uint32_t arg1);
+extern void udp2Worker(uint32_t arg0, uint32_t arg1);
+
 extern int32_t ti_net_SlNet_initConfig();
 
-/*
- *  ======== printError ========
+/********************************************************************************
+ *  FUNCTIONS
  */
-void printError(char *errString, int code)
-{
-    Display_printf(display, 0, 0, "Error! code = %d, Description = %s\n", code,
-            errString);
-    while(1);
-}
+
+/********************************************************************************
+                          Callback Functions
+*********************************************************************************/
 
 /*!
     \brief          SimpleLinkNetAppEventHandler
@@ -120,7 +141,14 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                             SL_IPV4_BYTE(pNetAppEvent->Data.IpAcquiredV4.Gateway,2),
                             SL_IPV4_BYTE(pNetAppEvent->Data.IpAcquiredV4.Gateway,1),
                             SL_IPV4_BYTE(pNetAppEvent->Data.IpAcquiredV4.Gateway,0));
-
+                
+                /* When router is connected, create 3 thread to handle tcp & udp socket */
+                
+                /*  tcpThread with acess function tcpHadler to deal with client connection, 
+                    when client is connnected, tcpHandler create tcpWorker thread to deal 
+                    with Attribute Value Interaction.         
+                    @ref taskCreate
+                */
                 pthread_attr_init(&pAttrs);
                 priParam.sched_priority = 1;
                 status = pthread_attr_setschedparam(&pAttrs, &priParam);
@@ -128,8 +156,31 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 status = pthread_create(&tcpThread, &pAttrs, (void *(*)(void *))tcpHandler, (void*)TCPPORT);
                 if(status)
                 {
-                    printError("Task create failed", status);
+                    printError("tcpThread create failed", status);
                 }
+
+                /*  udp1Thread with acess function udp1Worker to deal with eeg data transmission */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+                status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
+                if(status)
+                {
+                    printError("udp1Thread create failed", status);
+                }
+
+                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
+                if(status)
+                {
+                    printError("udp2Thread create failed", status);
+                }
+                
             }
             break;
         default:
@@ -295,7 +346,87 @@ void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
     /* Unused in this application */
 }
 
-void Connect(void)
+/********************************************************************************
+                         Local Functions
+********************************************************************************/
+/*
+ *  ======== printError ========
+ */
+static void printError(char *errString, int code)
+{
+    Display_printf(display, 0, 0, "Error! code = %d, Description = %s\n", code,
+            errString);
+    while(1);
+}
+
+/*!
+    \brief      DisplayBanner
+
+     Application startup display
+
+    \param      void
+
+    \return     void
+*/
+static void DisplayBanner(char * AppName,char * AppVer)
+{
+    int32_t ret = 0;
+    uint16_t ConfigSize = 0;
+    uint16_t macAddressLen = 6;
+    uint8_t ConfigOpt = SL_DEVICE_GENERAL_VERSION;
+    ConfigSize = sizeof(SlDeviceVersion_t);
+
+    /* Get device version info. */
+    ret = sl_DeviceGet(SL_DEVICE_GENERAL, &ConfigOpt, &ConfigSize,
+                       (uint8_t*)(&ver));
+    if(ret)
+    {
+        printError("Error code", ret);
+    }
+
+    /* Get device Mac address */
+    ret = sl_NetCfgGet(SL_NETCFG_MAC_ADDRESS_GET, 0, &macAddressLen,
+                       &networkparam.MAC_Addr[0]);
+    
+    /* TODO FAKE ID create */
+    ver.ChipId = SL_IPV4_VAL(networkparam.MAC_Addr[2],networkparam.MAC_Addr[3],\
+                            networkparam.MAC_Addr[4],networkparam.MAC_Addr[5]);
+
+    if(ret)
+    {
+        printError("Error code", ret);
+    }
+
+    Display_printf(display, 0, 0, "===============================================");
+    Display_printf(display, 0, 0, "\t   %s Ver: %s \r\n",AppName, AppVer);
+    Display_printf(display, 0, 0, "===============================================");
+    Display_printf(display, 0, 0, "\t CHIPId: 0x%x \r\n",ver.ChipId);
+    Display_printf(display, 0, 0, "\t MAC Version:  %d.%d.%d.%d \r\n",
+                   ver.FwVersion[0],ver.FwVersion[1],
+                   ver.FwVersion[2],ver.FwVersion[3]);
+    Display_printf(display, 0, 0,"\t PHY Version:  %d.%d.%d.%d \r\n",
+                   ver.PhyVersion[0],ver.PhyVersion[1],
+                   ver.PhyVersion[2],ver.PhyVersion[3]);
+    Display_printf(display, 0, 0,"\t NWP Version:  %d.%d.%d.%d \r\n",
+                   ver.NwpVersion[0],ver.NwpVersion[1],
+                   ver.NwpVersion[2],ver.NwpVersion[3]);
+    Display_printf(display, 0, 0,"\t MAC Address: %02x-%02x-%02x-%02x-%02x-%02x",
+                   networkparam.MAC_Addr[0],networkparam.MAC_Addr[1],\
+                   networkparam.MAC_Addr[2],networkparam.MAC_Addr[3], \
+                   networkparam.MAC_Addr[4],networkparam.MAC_Addr[5]);
+}
+
+/*!
+    \brief      Connect
+
+    This function is to connect the device to the specific router.
+    @ref Router Param
+
+    \param      void
+
+    \return     void
+*/
+static void Connect(void)
 {
     SlWlanSecParams_t   secParams = {0};
     int16_t ret = 0;
@@ -310,13 +441,25 @@ void Connect(void)
     }
 }
 
+/********************************************************************************
+                         External Functions
+********************************************************************************/
+/*!
+    \brief      TaskCreate
+    
+    This function is to create a new tcpWorker task after tcp communication 
+    is created
+
+    \param      void
+
+    \return     void
+*/
 void *TaskCreate(void (*pFun)(void *), char *Name, int Priority, uint32_t StackSize,
         uintptr_t Arg1, uintptr_t Arg2, uintptr_t argReserved)
 {
     int32_t             status = 0;
     pthread_attr_t      pAttrs_tcp;
     struct sched_param  priParam;
-
 
     /* Start the TCP Worker  */
     pthread_attr_init(&pAttrs_tcp);
@@ -333,27 +476,35 @@ void *TaskCreate(void (*pFun)(void *), char *Name, int Priority, uint32_t StackS
     return ((void *)!status);
 }
 
+/********************************************************************************
+                         Main Functions
+********************************************************************************/
 void mainThread(void *pvParameters)
 {
     int32_t             status = 0;
     pthread_attr_t      pAttrs_spawn;
     struct sched_param  priParam;
 
-    SPI_init();
+
+    /* Initial all the Peripherals */
+    // GPIO_init(); // no need to initial the GPIO, already done by main_tirtos.c 
     Display_init();
+    
     display = Display_open(Display_Type_UART, NULL);
     if (display == NULL) {
         /* Failed to open display driver */
         while(1);
     }
 
-    /* led on */
-    GPIO_write(Status_LED_1,0);
-
     Timer_Handle SyncTimer;
     /* SyncTimer */
     SyncTimer = Sync_Init();
     Timer_start(SyncTimer);
+    
+    AttrTbl_Init();
+
+    /* led_red on to indicate all the drivers are ready */
+    GPIO_write(LED_RED,0);
 
     /* Start the SimpleLink Host */
     pthread_attr_init(&pAttrs_spawn);
@@ -402,5 +553,6 @@ void mainThread(void *pvParameters)
         printError("Failed to configure device to it's default state", mode);
     }
 
+    /* try to connect the router */
     Connect();
 }
