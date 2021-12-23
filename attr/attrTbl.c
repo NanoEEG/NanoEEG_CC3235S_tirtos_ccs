@@ -29,14 +29,14 @@
 static uint8_t* pattr_offset[ATTR_NUM];     //!< 属性偏移地址
 
 /* 基本信息 */
-const   uint16_t dev_chnum = 16;//CHANNEL_NUM; TODO
+const   uint8_t dev_chnum = 16;//CHANNEL_NUM; TODO
 SlDeviceVersion_t ver= {0};
 
 /* 采样状态与控制 */
 static bool     sampling;
 static bool     impMeas;
 static uint8_t  impMeas_mode;
-static float    impMeasval[16]; //TODO
+static float    impMeasval[16]; //TODO 读取该属性有bug会死机
 
 /* 通信参数 */
 NETParam_t netparam;
@@ -44,12 +44,12 @@ uint8_t samplenum = 10;//UDP_SAMPLENUM; TODO
 
 /* 采样参数 */
 static uint16_t curSamprate = SPS_250;
-static const uint16_t samplerate_tbl[]={SPS_250,SPS_500,SPS_1K,SPS_2K,SPS_4K};
+static const uint16_t samplerate_tbl[]={SPS_250,SPS_500,SPS_1K,SPS_2K};
 static uint8_t cur_gain = GAIN_X24;
 static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
 
 /* 事件触发 */
-static uint16_t trig_delay;
+static uint16_t trig_delay = 1000; //TODO
 /************************************************************************
  *  Attribute  Table
  */
@@ -67,7 +67,7 @@ const AttrTbl_t attr_tbl = {
         //!< 仪器总通道数
         .Dev_ChNum      = { ATTR_RO, 
                             ATTR_CONFIG,
-                            2,
+                            1,
                             (uint32_t*)&dev_chnum
                            },
 
@@ -173,7 +173,7 @@ const AttrTbl_t attr_tbl = {
         //!< 外触发信号延迟时间 us
         .Trig_delay     = { ATTR_RW,
                             ATTR_CONFIG,
-                            1,
+                            2,
                             (uint32_t*)&trig_delay
                             },                           
 };
@@ -235,13 +235,13 @@ static AttrCBs_t attr_CBs =
             pValue - 属性值 （to be returned）
             pLen - 属性值大小（to be returned）
             
-    \return true 读取属性值成功
-            ATTR_NOT_FOUND 属性不存在
+    \return ATTR_SUCCESS    读取属性值成功
+            ATTR_NOT_FOUND  属性不存在
  */
 static uint8_t ReadAttrCB(  uint8_t InsAttrNum,uint8_t CHxNum,
                             uint8_t *pValue, uint8_t *pLen )
 {
-    uint8_t status = true;
+    uint8_t status = ATTR_SUCCESS;
     uint8_t *pAttrValue;    //!< 属性值地址
 
     if( (InsAttrNum > ATTR_NUM ) && ( CHxNum == 0xFF ))
@@ -250,10 +250,10 @@ static uint8_t ReadAttrCB(  uint8_t InsAttrNum,uint8_t CHxNum,
     }
 
     //!< 读属性值
-    if(status == true)
+    if(status == ATTR_SUCCESS)
     {
-        pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+2);//!< 属性值地址传递
-        *pLen = *(pattr_offset[InsAttrNum]+1); //!< 属性值大小传递（值传递!地址不变 9.13）
+        pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+3);//!< 属性值地址传递
+        *pLen = *(pattr_offset[InsAttrNum]+2); //!< 属性值大小传递（值传递!地址不变 9.13）
         memcpy(pValue,pAttrValue,*pLen); //!< 属性值读取
     }
 
@@ -282,7 +282,7 @@ static uint8_t WriteAttrCB( uint8_t InsAttrNum,uint8_t CHxNum,
     uint8_t *pAttrValue;    //!< 属性值地址
 
     AttrPermission = *(pattr_offset[InsAttrNum]);
-    AttrLen = *(pattr_offset[InsAttrNum]+1);
+    AttrLen = *(pattr_offset[InsAttrNum]+2);
 
     if( (InsAttrNum > ATTR_NUM ) && ( CHxNum == 0xFF ))
     {
@@ -301,7 +301,7 @@ static uint8_t WriteAttrCB( uint8_t InsAttrNum,uint8_t CHxNum,
     //!< 写属性值并通知应用层（AttrChange_Process）
     if(status == true)
     {
-        pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+2);//!< 属性值地址传递
+        pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+3);//!< 属性值地址传递
 
         memcpy(pAttrValue,pValue,len); //!< 属性值写入
         notifyApp=InsAttrNum;

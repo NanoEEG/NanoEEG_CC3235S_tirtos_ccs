@@ -17,11 +17,6 @@
  */
 #define ATTR_NUM                        22      //!< 属性表支持的属性数量（除通道属性）
 
-/* 读写回调状态参数 */
-#define ATTR_ERR_RO                     0x01    //!< 属性不允许写操作
-#define ATTR_ERR_SIZE                   0x02    //!< 待写数据长度与属性值长度不符
-#define ATTR_NOT_FOUND                  0x03    //!< 待读写的属性不存在
-
 /* 属性权限 */
 #define ATTR_RO                         0x00    //!< 只读属性
 #define ATTR_RW                         0x01    //!< 读写属性，可读可写

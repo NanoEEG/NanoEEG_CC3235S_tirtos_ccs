@@ -152,6 +152,9 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                             SL_IPV4_BYTE(pNetAppEvent->Data.IpAcquiredV4.Gateway,1),
                             SL_IPV4_BYTE(pNetAppEvent->Data.IpAcquiredV4.Gateway,0));
                 
+                // update Dev_IP Attr
+                netparam.IP_Addr = pNetAppEvent->Data.IpAcquiredV4.Ip;
+
                 /* When router is connected, create 3 thread to handle tcp & udp socket */
                 
                 /*  tcpThread with acess function tcpHadler to deal with client connection, 
@@ -179,7 +182,8 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 //                {
 //                    printError("udp1Thread create failed", status);
 //                }
-//
+//                // update EEGDataPort Attr
+//                netparam.EEGdataPort = UDP1PORT;
 //                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
 //                pthread_attr_init(&pAttrs);
 //                priParam.sched_priority = SOCKET_TASK_PRIORITY;
@@ -190,7 +194,8 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 //                {
 //                    printError("udp2Thread create failed", status);
 //                }
-                
+//                // update EventDataPort Attr
+//                netparam.EventDataPort = UDP2PORT;
             }
             break;
         default:
@@ -408,7 +413,7 @@ static void DisplayBanner(char * AppName,char * AppVer)
     }
 
     Display_printf(display, 0, 0, "===============================================");
-    Display_printf(display, 0, 0, "\t    %s Ver: %s \r\n",AppName, AppVer);
+    Display_printf(display, 0, 0, "\t      %s Ver: %s \r\n",AppName, AppVer);
     Display_printf(display, 0, 0, "===============================================");
     Display_printf(display, 0, 0, "\t CHIPId: 0x%x \r\n",ver.ChipId);
     Display_printf(display, 0, 0, "\t MAC Version:  %d.%d.%d.%d \r\n",
@@ -420,7 +425,7 @@ static void DisplayBanner(char * AppName,char * AppVer)
     Display_printf(display, 0, 0,"\t NWP Version:  %d.%d.%d.%d \r\n",
                    ver.NwpVersion[0],ver.NwpVersion[1],
                    ver.NwpVersion[2],ver.NwpVersion[3]);
-    Display_printf(display, 0, 0,"\t MAC Address: %02x-%02x-%02x-%02x-%02x-%02x",
+    Display_printf(display, 0, 0,"\t MAC Address: %02x-%02x-%02x-%02x-%02x-%02x\r\n",
                    netparam.MAC_Addr[0],netparam.MAC_Addr[1],\
                    netparam.MAC_Addr[2],netparam.MAC_Addr[3], \
                    netparam.MAC_Addr[4],netparam.MAC_Addr[5]);
@@ -498,8 +503,9 @@ void mainThread(void *pvParameters)
 
     /* Initial all the Peripherals */
     // GPIO_init(); // no need to initial the GPIO, already done by main_tirtos.c 
-    
+    SPI_init(); //[DANGER] never delete it because NWP need to communicate with AP by SPI
     Display_init();
+
     display = Display_open(Display_Type_UART, NULL);
     if (display == NULL) {
         /* Failed to open display driver */
@@ -513,7 +519,7 @@ void mainThread(void *pvParameters)
     
     AttrTbl_Init();
 
-    /* led_red on to indicate all the drivers are ready */
+    /* led_green on to indicate all the drivers are ready */
     GPIO_write(LED_GREEN,0);
 
     /* Start the SimpleLink Host */

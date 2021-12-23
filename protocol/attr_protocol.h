@@ -23,6 +23,11 @@
 #define CAttr_Write                 0x10    //!< 写一个普通属性
 #define ChxAttr_Read                0x02    //!< 读一个通道属性
 #define ChxAttr_Write               0x20    //!< 写一个通道属性
+// 错误码
+#define ATTR_SUCCESS                0x00    //!< 属性读写正常
+#define ATTR_ERR_RO                 0x01    //!< 属性不允许写操作
+#define ATTR_ERR_SIZE               0x02    //!< 待写数据长度与属性值长度不符
+#define ATTR_NOT_FOUND              0x03    //!< 待读写的属性不存在
 
 // 通讯收发缓冲区参数
 #define TCP_Rx_Buff_Size            16

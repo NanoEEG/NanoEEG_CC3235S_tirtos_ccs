@@ -326,7 +326,7 @@ static bool FrameReply(void *condition, struct event *event)
    /* 打包回复 */
     *(pTCP_Tx_Buff) = TCP_Send_FH; //!< 帧头
 
-   if( tcpframe.ERR_NUM != true )
+   if( tcpframe.ERR_NUM != ATTR_SUCCESS )
        tcpframe.FrameLength=2; //!< 有效帧只含错误码+回复类型
 
    *(pTCP_Tx_Buff+1) = tcpframe.FrameLength;  //!< 有效帧
