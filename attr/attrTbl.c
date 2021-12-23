@@ -1,7 +1,7 @@
 /**
  * @file    attrTbl.c
  * @author  gjmsilly
- * @brief   CC3235S 属性表
+ * @brief   NanoEEG 属性表
  * @version 1.0.0
  * @date    2020-09-01
  *
@@ -12,15 +12,16 @@
 /***********************************************************************
  * INCLUDES
  */
-#include <stdbool.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "attrTbl.h"
 #include <protocol/attr_protocol.h>
-//#include <protocol/eegdata_protocol.h>
+#include <protocol/eegdata_protocol.h>
 #include <ti/drivers/net/wifi/slnetifwifi.h>
+
 /***********************************************************************
  * LOCAL VARIABLES
  */
@@ -29,7 +30,7 @@
 static uint8_t* pattr_offset[ATTR_NUM];     //!< 属性偏移地址
 
 /* 基本信息 */
-const   uint8_t dev_chnum = 16;//CHANNEL_NUM; TODO
+const   uint8_t dev_chnum = CHANNEL_NUM;
 SlDeviceVersion_t ver= {0};
 
 /* 采样状态与控制 */
@@ -40,12 +41,12 @@ static float    impMeasval[16]; //TODO 读取该属性有bug会死机
 
 /* 通信参数 */
 NETParam_t netparam;
-uint8_t samplenum = 10;//UDP_SAMPLENUM; TODO
+uint8_t samplenum = UDP_SAMPLENUM;
 
 /* 采样参数 */
 static uint16_t curSamprate = SPS_250;
 static const uint16_t samplerate_tbl[]={SPS_250,SPS_500,SPS_1K,SPS_2K};
-static uint8_t cur_gain = GAIN_X24;
+static uint8_t curGain = GAIN_X24;
 static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
 
 /* 事件触发 */
@@ -165,7 +166,7 @@ const AttrTbl_t attr_tbl = {
         .CurGain        = { ATTR_RW,
                             ATTR_CONFIG,
                             1,
-                            (uint32_t*)&cur_gain
+                            (uint32_t*)&curGain
                             },     
 
    /*  ======================== 事件触发 ============================== */
@@ -195,7 +196,7 @@ static pfnAttrChangeCB_t pAppCallbacks; //!< 应用层回调函数指针
     \return true - 回调函数注册成功
             false - 回调函数注册失败
  */
-uint8_t Attr_Tbl_RegisterAppCBs(void *appcallbacks)
+bool AttrTbl_RegisterAppCBs(void *appcallbacks)
 {
     if ( appcallbacks )
   {
@@ -228,12 +229,12 @@ static AttrCBs_t attr_CBs =
 
 
 /*!
-    \brief  ReadAttrCB   读属性回调函数
+    \brief  ReadAttrCB      读属性回调函数
             
-    \param  InsAttrNum - 待读属性编号
-            CHxNum - 通道编号（通道属性专用，默认不用   0xFF）
-            pValue - 属性值 （to be returned）
-            pLen - 属性值大小（to be returned）
+    \param  InsAttrNum      待读属性编号
+            CHxNum          通道编号（通道属性专用，默认不用   0xFF）
+            pValue          属性值 （to be returned）
+            pLen            属性值大小（to be returned）
             
     \return ATTR_SUCCESS    读取属性值成功
             ATTR_NOT_FOUND  属性不存在
@@ -262,26 +263,30 @@ static uint8_t ReadAttrCB(  uint8_t InsAttrNum,uint8_t CHxNum,
 }
 
 /*!
-    \brief  WriteAttrCB    写属性回调函数
+    \brief  WriteAttrCB     写属性回调函数
   
-    \param  InsAttrNum - 待写入属性编号
-            CHxNum - 通道编号（通道属性专用，默认不用   0xFF）
-            pValue - 待写入数据的指针
-            pLen - 待写入数据大小
+    \param  InsAttrNum      待写入属性编号
+            CHxNum          通道编号（通道属性专用，默认不用   0xFF）
+            pValue          待写入数据的指针
+            pLen            待写入数据大小
             
-    \return true 读取属性值成功
-            ATTR_NOT_FOUND 属性不存在
+    \return ATTR_SUCCESS    读取属性值成功
+            ATTR_NOT_FOUND  属性不存在
+            ATTR_ERR_RO     属性不允许写操作
+            ATTR_ERR_SIZE   待写数据长度与属性值长度不符
  */
 static uint8_t WriteAttrCB( uint8_t InsAttrNum,uint8_t CHxNum,
                             uint8_t *pValue, uint8_t len )
 {
-    uint8_t status;
+    uint8_t status = ATTR_SUCCESS;
     uint8_t notifyApp=0xFF; //!< 标志位 - 通知上层应用程序属性值变化
     uint8_t AttrPermission; //!< 属性读写权限
+    uint8_t AttrType;       //!< 属性类型
     uint8_t AttrLen;        //!< 属性值大小
     uint8_t *pAttrValue;    //!< 属性值地址
 
     AttrPermission = *(pattr_offset[InsAttrNum]);
+    AttrType = *(pattr_offset[InsAttrNum]+1);
     AttrLen = *(pattr_offset[InsAttrNum]+2);
 
     if( (InsAttrNum > ATTR_NUM ) && ( CHxNum == 0xFF ))
@@ -292,14 +297,17 @@ static uint8_t WriteAttrCB( uint8_t InsAttrNum,uint8_t CHxNum,
     {
         status = ATTR_ERR_RO; //!< 属性不允许写操作
     }
-    else if( len!= AttrLen)
+    else if( len!= AttrLen )
     {
         status = ATTR_ERR_SIZE; //!< 待写数据长度与属性值长度不符
     }
-    else status = true;
+    else status = ATTR_SUCCESS;
+
+    //!< 根据写属性类型校验写入数据有效性
+    // TODO 写属性类型是配置类型时，需要检查该值是否是配置类型有效值，checkValid();
 
     //!< 写属性值并通知应用层（AttrChange_Process）
-    if(status == true)
+    if(status == ATTR_SUCCESS)
     {
         pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+3);//!< 属性值地址传递
 
@@ -361,4 +369,57 @@ void AttrTbl_Init()
     pattr_offset[CURGAIN] = (uint8_t*)&attr_tbl.CurGain.permissions;
     
     pattr_offset[TRIGDELAY] = (uint8_t*)&attr_tbl.Trig_delay.permissions;
+}
+
+
+/*!
+    \brief  读属性函数 （供应用层获取属性）
+
+    \param  InsAttrNum - 待写入属性编号
+            pValue - 待写入数据的指针
+
+    \return true 读取属性值成功
+            //TODO
+ */
+uint8_t App_GetAttr(uint8_t InsAttrNum, uint32_t *pValue)
+{
+    uint8_t ret = true;
+
+    switch(InsAttrNum)
+    {
+        case SAMPLING:
+            memcpy(pValue,&sampling,1);
+            break;
+
+        case CURSAMPLERATE:
+            memcpy(pValue,&curSamprate,4);
+            break;
+
+        case CURGAIN:
+            memcpy(pValue,&curGain,4);
+            break;
+    }
+  return ( ret );
+}
+
+/*!
+    \brief  写属性函数 （供应用层修改属性值）
+
+    \param  InsAttrNum - 待写入属性编号
+            Value - 待写入数据
+
+    \return true 写属性值成功
+            //TODO
+ */
+uint8_t App_WriteAttr(uint8_t InsAttrNum, uint8_t Value)
+{
+    uint8_t ret = true;
+
+    switch(InsAttrNum)
+    {
+        case SAMPLING:
+            sampling=Value; //TODO 开关类型属性需要状态机实现
+            break;
+    }
+  return ( ret );
 }

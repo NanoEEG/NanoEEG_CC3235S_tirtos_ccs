@@ -12,6 +12,8 @@
 #ifndef __ATTRTBL_H
 #define __ATTRTBL_H
 
+#include <stdbool.h>
+
 /*******************************************************************
  * CONSTANTS
  */
@@ -152,11 +154,20 @@ typedef struct
 
 
 
+/*!
+    \brief  属性值变化回调函数原型
+    \param  AttrNum - 值变化的属性
+
+ */
 typedef void (*pfnAttrChangeCB_t)( uint8_t AttrNum );
+
 
 /*********************************************************************
  * FUNCTIONS
  */
 void AttrTbl_Init();
+bool AttrTbl_RegisterAppCBs(void *appCallbacks);
+uint8_t App_GetAttr(uint8_t InsAttrNum, uint32_t *pValue);
+uint8_t App_WriteAttr(uint8_t InsAttrNum, uint8_t Value);
 
 #endif /* __ATTRTBL_H */

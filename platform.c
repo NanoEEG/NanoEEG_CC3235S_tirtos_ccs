@@ -53,6 +53,8 @@
 #include "platform.h"
 #include <attr/attrTbl.h>
 #include <task/cc1310_Sync.h>
+#include <service/timestamp.h>
+#include <service/ads1299.h>
 
 /********************************************************************************
  *  GLOBAL VARIABLES
@@ -65,9 +67,16 @@ pthread_t tcpThread = (pthread_t)NULL;
 pthread_t tcpworker_thread = (pthread_t)NULL;
 pthread_t udp1Thread = (pthread_t)NULL;
 pthread_t udp2Thread = (pthread_t)NULL;
+pthread_t ControlThread = (pthread_t)NULL;
+pthread_t SampleThread = (pthread_t)NULL;
+
 
 //!< Driver handle
 Display_Handle display;
+
+SampleTime_t *pSampleTime = NULL;
+sem_t UDPDataReady;
+sem_t SampleReady;
 
 /********************************************************************************
  *  EXTERNAL VARIABLES
@@ -81,7 +90,9 @@ extern SlDeviceVersion_t ver;
 extern void tcpHandler(uint32_t arg0, uint32_t arg1);
 extern void tcpWorker(uint32_t arg0, uint32_t arg1);
 extern void udp1Worker(uint32_t arg0, uint32_t arg1);
-extern void udp2Worker(uint32_t arg0, uint32_t arg1);
+//extern void udp2Worker(uint32_t arg0, uint32_t arg1);
+extern void SampleTask(void* arg0 , void* arg1);
+extern void controlTask(uint32_t arg0, uint32_t arg1);
 
 extern int32_t ti_net_SlNet_initConfig();
 
@@ -155,7 +166,8 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 // update Dev_IP Attr
                 netparam.IP_Addr = pNetAppEvent->Data.IpAcquiredV4.Ip;
 
-                /* When router is connected, create 3 thread to handle tcp & udp socket */
+                /* When router is connected, create 3 threads to handle tcp & udp,
+                   2 threads: control_task to handle attr change, sample_task to handle sample */
                 
                 /*  tcpThread with acess function tcpHadler to deal with client connection, 
                     when client is connnected, tcpHandler create tcpWorker thread to deal 
@@ -172,18 +184,45 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                     printError("tcpThread create failed", status);
                 }
 
-//                /*  udp1Thread with acess function udp1Worker to deal with eeg data transmission */
-//                pthread_attr_init(&pAttrs);
-//                priParam.sched_priority = SOCKET_TASK_PRIORITY;
-//                status = pthread_attr_setschedparam(&pAttrs, &priParam);
-//                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
-//                status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
-//                if(status)
-//                {
-//                    printError("udp1Thread create failed", status);
-//                }
-//                // update EEGDataPort Attr
-//                netparam.EEGdataPort = UDP1PORT;
+                /*  udp1Thread with acess function udp1Worker to deal with eeg data transmission */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+                status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
+                if(status)
+                {
+                    printError("udp1Thread create failed", status);
+                }
+                // update EEGDataPort Attr
+                netparam.EEGdataPort = UDP1PORT;
+
+                /* Start the Control task */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = CONTROL_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, CONTROL_STACK_SIZE);
+
+                status = pthread_create(&ControlThread, &pAttrs, (void *(*)(void *))controlTask, NULL);
+
+                if(status)
+                {
+                    printError("control task create failed", status);
+                }
+
+                /* Start the Sample task */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SAMPLE_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, SAMPLE_STACK_SIZE);
+
+                status = pthread_create(&SampleThread, &pAttrs, (void *(*)(void *))SampleTask , NULL);
+
+                if(status)
+                {
+                    printError("sample task create failed", status);
+                }
+
 //                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
 //                pthread_attr_init(&pAttrs);
 //                priParam.sched_priority = SOCKET_TASK_PRIORITY;
@@ -196,6 +235,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 //                }
 //                // update EventDataPort Attr
 //                netparam.EventDataPort = UDP2PORT;
+
             }
             break;
         default:
@@ -487,6 +527,7 @@ void *TaskCreate(void (*pFun)(void *), char *Name, uint32_t StackSize,
     if (status < 0) {
         return (NULL);
     }
+    pthread_detach(tcpworker_thread);
 
     return ((void *)!status);
 }
@@ -500,27 +541,36 @@ void mainThread(void *pvParameters)
     pthread_attr_t      pAttrs_spawn;
     struct sched_param  priParam;
 
+    Timer_Params timerparams;
 
     /* Initial all the Peripherals */
-    // GPIO_init(); // no need to initial the GPIO, already done by main_tirtos.c 
+    GPIO_init();
     SPI_init(); //[DANGER] never delete it because NWP need to communicate with AP by SPI
-    Display_init();
+    Timer_init();
 
+    Display_init();
     display = Display_open(Display_Type_UART, NULL);
     if (display == NULL) {
         /* Failed to open display driver */
         while(1);
     }
-
-    Timer_Handle SyncTimer;
-    /* SyncTimer */
-    SyncTimer = Sync_Init();
-    Timer_start(SyncTimer);
     
+    /* pSampleTime work as the system timestamp */
+    pSampleTime = SampleTimestamp_Service_Init(&timerparams);
+
+    /* Initial ads1299 */
+    ADS1299_Init(0);
+    ADS1299_Mode_Config(1); //!< set ads1299 mode
+
+    /* Initial AttrTbl */
     AttrTbl_Init();
 
+    /* initializes signals for all tasks */
+    sem_init(&UDPDataReady, 0, 0);
+    sem_init(&SampleReady, 0, 0);
+
     /* led_green on to indicate all the drivers are ready */
-    GPIO_write(LED_GREEN,0);
+    GPIO_write(LED_GREEN_GPIO,0);
 
     /* Start the SimpleLink Host */
     pthread_attr_init(&pAttrs_spawn);

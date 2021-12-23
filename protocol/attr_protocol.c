@@ -1,7 +1,7 @@
 /**
  * @file    attr_protocol.c
  * @author  gjmsilly
- * @brief   NanoEEG 控制通道帧服务
+ * @brief   NanoEEG 控制通道帧处理状态机
  * @version 1.0.0
  * @date    2020-12-27
  * @ref     FSM框架 - https://github.com/misje/stateMachine
@@ -296,7 +296,7 @@ static bool FrameIns(void *condition, struct event *event)
            tcpframe.ERR_NUM = pattr_CBs->pfnWriteAttrCB( tcpframe.InsAttrNum,tcpframe.ChxNum, \
                                                          tcpframe._OP_,tcpframe.DataLength);
 
-           if( tcpframe.ERR_NUM == true )
+           if( tcpframe.ERR_NUM == ATTR_SUCCESS )
            {
                //!< 拷贝一份用于回复
                memcpy((pTCP_Tx_Buff+4),tcpframe._OP_,tcpframe.DataLength);
