@@ -74,9 +74,8 @@ static void Attr_ChangeCBs(uint8_t AttrNum)
     \return true    处理完成
             false   处理异常
  */
-static bool AttrChangeProcess (uint8_t AttrChangeNum)
+static void AttrChangeProcess (uint8_t AttrChangeNum)
 {
-    bool ret = true;
 
     static uint32_t attrvalue=0;            //!< 属性值
     static uint32_t *pValue =&attrvalue;    //!< 属性值指针
@@ -93,7 +92,7 @@ static bool AttrChangeProcess (uint8_t AttrChangeNum)
                     /* Failed to start timer */
                     while (1) {}
                 }
-                eegSamplingState = 0; //复位
+
                 eegSamplingState |= EEG_DATA_START_EVT; //!< 标识采样状态: 开始采样
 
                 /* ads1299 开始采集 */
@@ -114,8 +113,8 @@ static bool AttrChangeProcess (uint8_t AttrChangeNum)
         case CURSAMPLERATE:
             App_GetAttr(CURSAMPLERATE,pValue); //获取属性值
 
-            if(!ADS1299_SetSamplerate(0,*pValue)){
-                //TODO led
+            if(!ADS1299_SetSamplerate(0,*(uint16_t*)pValue)){
+                //TODO led 提示用户在此情况下不要尝试采集脑电信号
             }
 
         break;
@@ -123,11 +122,11 @@ static bool AttrChangeProcess (uint8_t AttrChangeNum)
         case CURGAIN:
             App_GetAttr(CURGAIN,pValue); //获取属性值
             if(!ADS1299_SetGain(0,*(uint8_t*)pValue)){
-                //TODO led
+                //TODO led 提示用户在此情况下不要尝试采集脑电信号
             }
         break;
     }
-   return ret;
+
 }
 
 /*!

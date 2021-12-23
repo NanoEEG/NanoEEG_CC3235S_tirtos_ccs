@@ -46,6 +46,9 @@
 
     [DANFER]  本结构体内数据需通过属性表获取
  */
+#pragma pack(push)
+#pragma pack(1)
+
  typedef struct
 {
      uint32_t DevID;                //!< 设备ID
@@ -60,6 +63,9 @@
     \brief  UDP数据通道 数据帧数据域结构体 - 一个通道组（8通道）
             本结构体定义UDP数据通道 数据帧数据域格式
  */
+#pragma pack(push)
+#pragma pack(1)
+
 typedef struct
 {
     uint8_t     FrameHeader;                        //!< 起始分隔符

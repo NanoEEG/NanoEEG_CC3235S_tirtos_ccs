@@ -73,16 +73,17 @@ pthread_t SampleThread = (pthread_t)NULL;
 
 //!< Driver handle
 Display_Handle display;
-
+//!< 系统时钟
 SampleTime_t *pSampleTime = NULL;
+//!< 信号量
 sem_t UDPDataReady;
 sem_t SampleReady;
 
 /********************************************************************************
  *  EXTERNAL VARIABLES
  */
-extern NETParam_t netparam;
-extern SlDeviceVersion_t ver;
+extern NETParam_t netparam; //!< 仪器网络参数
+extern SlDeviceVersion_t ver; //!< 仪器参数
 
 /********************************************************************************
  *  EXTERNAL FUNCTIONS
@@ -96,6 +97,9 @@ extern void controlTask(uint32_t arg0, uint32_t arg1);
 
 extern int32_t ti_net_SlNet_initConfig();
 
+/********************************************************************************
+ *  LOCAL FUNCTIONS
+ */
 static void printError(char *errString, int code);
 static void DisplayBanner(char * AppName,char * AppVer);
 
@@ -166,11 +170,11 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 // update Dev_IP Attr
                 netparam.IP_Addr = pNetAppEvent->Data.IpAcquiredV4.Ip;
 
-                /* When router is connected, create 3 threads to handle tcp & udp,
-                   2 threads: control_task to handle attr change, sample_task to handle sample */
+                /* When router is connected, create 3 threads to handle tcp & udp communication,
+                   2 threads: control_task to handle attr change, sample_task to handle EEG sampling */
                 
-                /*  tcpThread with acess function tcpHadler to deal with client connection, 
-                    when client is connnected, tcpHandler create tcpWorker thread to deal 
+                /*  tcpThread with acess function tcpHadler to deal with TCP client connection,
+                    when TCP client is connnected, tcpHandler create tcpWorker thread to deal
                     with Attribute Value Interaction.         
                     @ref taskCreate
                 */
@@ -527,6 +531,7 @@ void *TaskCreate(void (*pFun)(void *), char *Name, uint32_t StackSize,
     if (status < 0) {
         return (NULL);
     }
+
     pthread_detach(tcpworker_thread);
 
     return ((void *)!status);
@@ -555,17 +560,17 @@ void mainThread(void *pvParameters)
         while(1);
     }
     
-    /* pSampleTime work as the system timestamp */
+    /* SampleTime work as the system timestamp */
     pSampleTime = SampleTimestamp_Service_Init(&timerparams);
 
     /* Initial ads1299 */
     ADS1299_Init(0);
-    ADS1299_Mode_Config(1); //!< set ads1299 mode
+    ADS1299_Mode_Config(1); //!< set ads1299 mode as EEG ACQ for default
 
     /* Initial AttrTbl */
     AttrTbl_Init();
 
-    /* initializes signals for all tasks */
+    /* Initializes signals for all tasks */
     sem_init(&UDPDataReady, 0, 0);
     sem_init(&SampleReady, 0, 0);
 

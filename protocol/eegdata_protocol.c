@@ -94,14 +94,14 @@ bool UDP_DataGet(uint8_t SampleIndex)
     脑电数据通道 数据帧封包处理，本函数在一包EEG样本获取完毕后调用，
     本函数负责处理数据域封包和帧头部封包。
 
-    \param  pSampleTime -   EEG样本时间戳定时器对象，该对象应提供一包
+    \param  pSampleTime  -  EEG样本时间戳定时器对象，该对象应提供一包
                             数据帧中各个样本的精密时间戳
-            error       -   EEG数据采集过程是否出现过意外关闭
+            reSampleFlag -   本次采样前发生过采样停止
 
     \return success - UDP打包数据完毕
             false - 异常
  */
-bool UDP_DataProcess(SampleTime_t *pSampleTime,bool error)
+bool UDP_DataProcess(SampleTime_t *pSampleTime,bool reSampleFlag)
 {
     uint8_t Index;
 
@@ -116,8 +116,8 @@ bool UDP_DataProcess(SampleTime_t *pSampleTime,bool error)
 
      /* 帧头部封包 */
 
-     //!< 发生过EEG暂停采集事件或第一次UDP帧头封包
-     if( error ||  (UDPNum==0) )
+     //!< 发生过EEG暂停采集或第一次UDP帧头封包
+     if( reSampleFlag ||  (UDPNum==0) )
      {
         UDP_DataFrameHeaderGet(); //!< 重新获取UDP帧头数据
         UDPNum = 0; //!< UDP包累加滚动码重新计数

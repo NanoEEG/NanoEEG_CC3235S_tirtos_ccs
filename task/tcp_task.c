@@ -54,7 +54,6 @@
 
 #include <protocol/attr_protocol.h>
 
-#define TCPPACKETSIZE 256
 #define NUMTCPWORKERS 3
 
 /*******************************************************************************

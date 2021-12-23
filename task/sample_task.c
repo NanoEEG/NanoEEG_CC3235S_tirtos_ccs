@@ -79,10 +79,10 @@ void SampleTask(uint32_t arg0, uint32_t arg1)
 
     while(1)
     {
-        /* 等待信号量,由Mod_nDRDY中断释放，等不到则阻塞 */
+        /* 等待信号量,由Mod_nDRDY中断的回调函数释放，等不到则阻塞 */
         sem_wait(&SampleReady);
 
-        /* 信号量释放，开始运行 */
+        /* 信号量一旦释放，则开始运行下面的代码 */
 
         /* 每次开始采样时对样本序号清零 */
         if( eegSamplingState & EEG_DATA_START_EVT )
@@ -110,7 +110,8 @@ void SampleTask(uint32_t arg0, uint32_t arg1)
             eegSamplingState |= EEG_DATA_CPL_EVT; //!< 更新事件：一包ad数据采集完成
             eegSamplingState &= ~EEG_DATA_ACQ_EVT; //!< 清除前序事件 - 一包AD数据采集中
 
-            if(UDP_DataProcess(pSampleTime,eegSamplingState&EEG_STOP_EVT)) //!< 完成最后的封包工作
+            if(UDP_DataProcess(pSampleTime, eegSamplingState & EEG_STOP_EVT )) //!< 完成最后的封包工作
+                eegSamplingState &= ~EEG_STOP_EVT; //!< 清除前序事件 - AD数据暂停采集
                 sem_post(&UDPDataReady); //!< 释放信号量给UDP线程 将一包数据发送
         }
 

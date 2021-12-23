@@ -37,7 +37,7 @@ SlDeviceVersion_t ver= {0};
 static bool     sampling;
 static bool     impMeas;
 static uint8_t  impMeas_mode;
-static float    impMeasval[16]; //TODO 读取该属性有bug会死机
+static float    impMeasval[16]; //TODO 读取该属性有bug会死机 尝试增大TCP_Tx_Buff_Size
 
 /* 通信参数 */
 NETParam_t netparam;
@@ -50,7 +50,8 @@ static uint8_t curGain = GAIN_X24;
 static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
 
 /* 事件触发 */
-static uint16_t trig_delay = 1000; //TODO
+static uint16_t trig_delay = 1000; //TODO us为单位
+
 /************************************************************************
  *  Attribute  Table
  */
@@ -189,7 +190,7 @@ static pfnAttrChangeCB_t pAppCallbacks; //!< 应用层回调函数指针
 /*!
     \brief    Attr_Tbl_RegisterAppCBs
     
-    应用层注册回调函数的接口
+    应用层注册回调函数的接口，当属性值被上位机修改成功后，属性层告知上位机变化的属性编号
   
     \param  appcallbacks - 不指定函数类型
   
@@ -379,7 +380,7 @@ void AttrTbl_Init()
             pValue - 待写入数据的指针
 
     \return true 读取属性值成功
-            //TODO
+            //TODO 纠错机制
  */
 uint8_t App_GetAttr(uint8_t InsAttrNum, uint32_t *pValue)
 {
@@ -409,7 +410,7 @@ uint8_t App_GetAttr(uint8_t InsAttrNum, uint32_t *pValue)
             Value - 待写入数据
 
     \return true 写属性值成功
-            //TODO
+            //TODO 纠错机制
  */
 uint8_t App_WriteAttr(uint8_t InsAttrNum, uint8_t Value)
 {
