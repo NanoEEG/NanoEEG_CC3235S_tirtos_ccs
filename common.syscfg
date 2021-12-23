@@ -124,11 +124,13 @@ Timer2.interruptPriority = "4";
 Watchdog1.$name            = "CONFIG_WATCHDOG_0";
 Watchdog1.watchdog.$assign = "WATCHDOG0";
 
-LED1.$name          = "LED_RED";
-LED1.ledPin.$assign = "ball.61";
+LED1.$name                      = "LED_RED";
+LED1.ledPin.$assign             = "ball.61";
+LED1.gpioPin.initialOutputState = "High";
 
-LED2.$name          = "LED_GREEN";
-LED2.ledPin.$assign = "ball.63";
+LED2.$name                      = "LED_GREEN";
+LED2.ledPin.$assign             = "ball.63";
+LED2.gpioPin.initialOutputState = "High";
 
 net_utils1.$name = "CONFIG_NET_UTILS_0";
 

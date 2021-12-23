@@ -37,8 +37,8 @@ extern Display_Handle display;
 
 uint8_t TCP_Tx_Buff[TCP_Tx_Buff_Size];      //!< TCP发送缓冲区
 uint8_t TCP_Rx_Buff[TCP_Rx_Buff_Size];      //!< TCP接收缓冲区
-uint8_t *pTCP_Tx_Buff=TCP_Tx_Buff;
-uint8_t *pTCP_Rx_Buff=TCP_Rx_Buff;
+uint8_t *pTCP_Tx_Buff = TCP_Tx_Buff;
+uint8_t *pTCP_Rx_Buff = TCP_Rx_Buff;
 
 /*********************************************************************
  *  Callback
@@ -354,7 +354,7 @@ static void printExitMsg( void *stateData, struct event *event )
 }
 
 /*********************************************************************
- * EXPORTED FUNCTIONS
+ * FUNCTIONS
  */
 
 struct stateMachine TCP_Processfsm;

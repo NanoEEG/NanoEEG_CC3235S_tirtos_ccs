@@ -18,8 +18,9 @@
 #include <string.h>
 
 #include "attrTbl.h"
-#include <protocol/eegdata_protocol.h>
-
+#include <protocol/attr_protocol.h>
+//#include <protocol/eegdata_protocol.h>
+#include <ti/drivers/net/wifi/slnetifwifi.h>
 /***********************************************************************
  * LOCAL VARIABLES
  */
@@ -28,18 +29,18 @@
 static uint8_t* pattr_offset[ATTR_NUM];     //!< 属性偏移地址
 
 /* 基本信息 */
-const   uint16_t channelnum = CHANNEL_NUM;
+const   uint16_t dev_chnum = 16;//CHANNEL_NUM; TODO
 SlDeviceVersion_t ver= {0};
 
 /* 采样状态与控制 */
 static bool     sampling;
 static bool     impMeas;
 static uint8_t  impMeas_mode;
-static float    impMeasval[CHANNEL_NUM]; //TODO 
+static float    impMeasval[16]; //TODO
 
 /* 通信参数 */
-NETParam_t networkparam;
-uint8_t samplenum = UDP_SAMPLENUM;
+NETParam_t netparam;
+uint8_t samplenum = 10;//UDP_SAMPLENUM; TODO
 
 /* 采样参数 */
 static uint16_t curSamprate = SPS_250;
@@ -177,6 +178,145 @@ const AttrTbl_t attr_tbl = {
                             },                           
 };
 
+
+/************************************************************************
+ *  Callbacks
+ */
+
+static pfnAttrChangeCB_t pAppCallbacks; //!< 应用层回调函数指针
+
+/*!
+    \brief    Attr_Tbl_RegisterAppCBs
+    
+    应用层注册回调函数的接口
+  
+    \param  appcallbacks - 不指定函数类型
+  
+    \return true - 回调函数注册成功
+            false - 回调函数注册失败
+ */
+uint8_t Attr_Tbl_RegisterAppCBs(void *appcallbacks)
+{
+    if ( appcallbacks )
+  {
+        pAppCallbacks = appcallbacks;
+    return ( true );
+    }
+    else
+    {
+      return ( false );
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+
+/* Attribute table callbacks */
+static uint8_t ReadAttrCB(  uint8_t InsAttrNum,
+                            uint8_t CHxNum,
+                            uint8_t *pValue,
+                            uint8_t *pLen );
+
+static uint8_t WriteAttrCB( uint8_t InsAttrNum,
+                            uint8_t CHxNum,
+                            uint8_t *pValue,
+                            uint8_t len );
+
+static AttrCBs_t attr_CBs =
+{
+    .pfnReadAttrCB = ReadAttrCB,                    //!< 读属性回调函数指针
+    .pfnWriteAttrCB = WriteAttrCB                   //!< 写属性回调函数指针
+};
+
+
+/*!
+    \brief  ReadAttrCB   读属性回调函数
+            
+    \param  InsAttrNum - 待读属性编号
+            CHxNum - 通道编号（通道属性专用，默认不用   0xFF）
+            pValue - 属性值 （to be returned）
+            pLen - 属性值大小（to be returned）
+            
+    \return true 读取属性值成功
+            ATTR_NOT_FOUND 属性不存在
+ */
+static uint8_t ReadAttrCB(  uint8_t InsAttrNum,uint8_t CHxNum,
+                            uint8_t *pValue, uint8_t *pLen )
+{
+    uint8_t status = true;
+    uint8_t *pAttrValue;    //!< 属性值地址
+
+    if( (InsAttrNum > ATTR_NUM ) && ( CHxNum == 0xFF ))
+    {
+        status = ATTR_NOT_FOUND; //!< 属性不存在
+    }
+
+    //!< 读属性值
+    if(status == true)
+    {
+        pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+2);//!< 属性值地址传递
+        *pLen = *(pattr_offset[InsAttrNum]+1); //!< 属性值大小传递（值传递!地址不变 9.13）
+        memcpy(pValue,pAttrValue,*pLen); //!< 属性值读取
+    }
+
+    return status;
+
+}
+
+/*!
+    \brief  WriteAttrCB    写属性回调函数
+  
+    \param  InsAttrNum - 待写入属性编号
+            CHxNum - 通道编号（通道属性专用，默认不用   0xFF）
+            pValue - 待写入数据的指针
+            pLen - 待写入数据大小
+            
+    \return true 读取属性值成功
+            ATTR_NOT_FOUND 属性不存在
+ */
+static uint8_t WriteAttrCB( uint8_t InsAttrNum,uint8_t CHxNum,
+                            uint8_t *pValue, uint8_t len )
+{
+    uint8_t status;
+    uint8_t notifyApp=0xFF; //!< 标志位 - 通知上层应用程序属性值变化
+    uint8_t AttrPermission; //!< 属性读写权限
+    uint8_t AttrLen;        //!< 属性值大小
+    uint8_t *pAttrValue;    //!< 属性值地址
+
+    AttrPermission = *(pattr_offset[InsAttrNum]);
+    AttrLen = *(pattr_offset[InsAttrNum]+1);
+
+    if( (InsAttrNum > ATTR_NUM ) && ( CHxNum == 0xFF ))
+    {
+        status = ATTR_NOT_FOUND; //!< 属性不存在
+    }
+    else if( AttrPermission == ATTR_RO )
+    {
+        status = ATTR_ERR_RO; //!< 属性不允许写操作
+    }
+    else if( len!= AttrLen)
+    {
+        status = ATTR_ERR_SIZE; //!< 待写数据长度与属性值长度不符
+    }
+    else status = true;
+
+    //!< 写属性值并通知应用层（AttrChange_Process）
+    if(status == true)
+    {
+        pAttrValue = (uint8_t*)*(uint32_t*)(pattr_offset[InsAttrNum]+2);//!< 属性值地址传递
+
+        memcpy(pAttrValue,pValue,len); //!< 属性值写入
+        notifyApp=InsAttrNum;
+    }
+
+    if( (notifyApp!=0xFF) && pAppCallbacks )
+    {
+        (*pAppCallbacks)(notifyApp);
+    }
+
+    return status;
+
+}
+
+
 /************************************************************************
  * FUNCTIONS
  */
@@ -192,6 +332,9 @@ const AttrTbl_t attr_tbl = {
 */
 void AttrTbl_Init()
 {
+
+    /* 向控制通道协议层 注册属性值读写回调函数 */
+    protocol_RegisterAttrCBs(&attr_CBs);
 
     /* 建立地址映射 */
 

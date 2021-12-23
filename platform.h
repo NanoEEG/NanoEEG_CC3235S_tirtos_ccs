@@ -13,6 +13,7 @@
 #define SPAWN_TASK_PRIORITY                   (9)
 #define SAMPLE_TASK_PRIORITY                  (5)
 #define CONTROL_TASK_PRIORITY                 (2)
+#define TCP_WORKER_PRIORITY                   (4)
 #define SOCKET_TASK_PRIORITY                  (1)
 #define TASK_STACK_SIZE                       (4096)
 #define CONTROL_STACK_SIZE                    (1024)

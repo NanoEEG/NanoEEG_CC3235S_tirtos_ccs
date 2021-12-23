@@ -24,6 +24,8 @@ const Radio       = scripting.addModule("/ti/drivers/net/imagecreator/new_design
  */
 General.ModeSelect = "development";
 
+Network.HTTP_Enabled_Roles = ["STA_HTTP_SID_1"];
+
 fileTree.rootDirCfg = "userFiles";
 
 fileTree1.$name       = "ti_drivers_net_imagecreator_new_design_UserFiles_fileTree0";

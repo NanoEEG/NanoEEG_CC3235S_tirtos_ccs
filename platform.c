@@ -52,6 +52,7 @@
 // User Services & tasks
 #include "platform.h"
 #include <attr/attrTbl.h>
+#include <task/cc1310_Sync.h>
 
 /********************************************************************************
  *  GLOBAL VARIABLES
@@ -71,12 +72,21 @@ Display_Handle display;
 /********************************************************************************
  *  EXTERNAL VARIABLES
  */
+extern NETParam_t netparam;
+extern SlDeviceVersion_t ver;
+
+/********************************************************************************
+ *  EXTERNAL FUNCTIONS
+ */
 extern void tcpHandler(uint32_t arg0, uint32_t arg1);
 extern void tcpWorker(uint32_t arg0, uint32_t arg1);
 extern void udp1Worker(uint32_t arg0, uint32_t arg1);
 extern void udp2Worker(uint32_t arg0, uint32_t arg1);
 
 extern int32_t ti_net_SlNet_initConfig();
+
+static void printError(char *errString, int code);
+static void DisplayBanner(char * AppName,char * AppVer);
 
 /********************************************************************************
  *  FUNCTIONS
@@ -159,27 +169,27 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                     printError("tcpThread create failed", status);
                 }
 
-                /*  udp1Thread with acess function udp1Worker to deal with eeg data transmission */
-                pthread_attr_init(&pAttrs);
-                priParam.sched_priority = SOCKET_TASK_PRIORITY;
-                status = pthread_attr_setschedparam(&pAttrs, &priParam);
-                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
-                status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
-                if(status)
-                {
-                    printError("udp1Thread create failed", status);
-                }
-
-                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
-                pthread_attr_init(&pAttrs);
-                priParam.sched_priority = SOCKET_TASK_PRIORITY;
-                status = pthread_attr_setschedparam(&pAttrs, &priParam);
-                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
-                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
-                if(status)
-                {
-                    printError("udp2Thread create failed", status);
-                }
+//                /*  udp1Thread with acess function udp1Worker to deal with eeg data transmission */
+//                pthread_attr_init(&pAttrs);
+//                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+//                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+//                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+//                status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
+//                if(status)
+//                {
+//                    printError("udp1Thread create failed", status);
+//                }
+//
+//                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
+//                pthread_attr_init(&pAttrs);
+//                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+//                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+//                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+//                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
+//                if(status)
+//                {
+//                    printError("udp2Thread create failed", status);
+//                }
                 
             }
             break;
@@ -386,11 +396,11 @@ static void DisplayBanner(char * AppName,char * AppVer)
 
     /* Get device Mac address */
     ret = sl_NetCfgGet(SL_NETCFG_MAC_ADDRESS_GET, 0, &macAddressLen,
-                       &networkparam.MAC_Addr[0]);
+                       &netparam.MAC_Addr[0]);
     
     /* TODO FAKE ID create */
-    ver.ChipId = SL_IPV4_VAL(networkparam.MAC_Addr[2],networkparam.MAC_Addr[3],\
-                            networkparam.MAC_Addr[4],networkparam.MAC_Addr[5]);
+    ver.ChipId = SL_IPV4_VAL(netparam.MAC_Addr[2],netparam.MAC_Addr[3],\
+                            netparam.MAC_Addr[4],netparam.MAC_Addr[5]);
 
     if(ret)
     {
@@ -398,7 +408,7 @@ static void DisplayBanner(char * AppName,char * AppVer)
     }
 
     Display_printf(display, 0, 0, "===============================================");
-    Display_printf(display, 0, 0, "\t   %s Ver: %s \r\n",AppName, AppVer);
+    Display_printf(display, 0, 0, "\t    %s Ver: %s \r\n",AppName, AppVer);
     Display_printf(display, 0, 0, "===============================================");
     Display_printf(display, 0, 0, "\t CHIPId: 0x%x \r\n",ver.ChipId);
     Display_printf(display, 0, 0, "\t MAC Version:  %d.%d.%d.%d \r\n",
@@ -411,9 +421,9 @@ static void DisplayBanner(char * AppName,char * AppVer)
                    ver.NwpVersion[0],ver.NwpVersion[1],
                    ver.NwpVersion[2],ver.NwpVersion[3]);
     Display_printf(display, 0, 0,"\t MAC Address: %02x-%02x-%02x-%02x-%02x-%02x",
-                   networkparam.MAC_Addr[0],networkparam.MAC_Addr[1],\
-                   networkparam.MAC_Addr[2],networkparam.MAC_Addr[3], \
-                   networkparam.MAC_Addr[4],networkparam.MAC_Addr[5]);
+                   netparam.MAC_Addr[0],netparam.MAC_Addr[1],\
+                   netparam.MAC_Addr[2],netparam.MAC_Addr[3], \
+                   netparam.MAC_Addr[4],netparam.MAC_Addr[5]);
 }
 
 /*!
@@ -454,7 +464,7 @@ static void Connect(void)
 
     \return     void
 */
-void *TaskCreate(void (*pFun)(void *), char *Name, int Priority, uint32_t StackSize,
+void *TaskCreate(void (*pFun)(void *), char *Name, uint32_t StackSize,
         uintptr_t Arg1, uintptr_t Arg2, uintptr_t argReserved)
 {
     int32_t             status = 0;
@@ -463,7 +473,7 @@ void *TaskCreate(void (*pFun)(void *), char *Name, int Priority, uint32_t StackS
 
     /* Start the TCP Worker  */
     pthread_attr_init(&pAttrs_tcp);
-    priParam.sched_priority = Priority;
+    priParam.sched_priority = TCP_WORKER_PRIORITY;
     status = pthread_attr_setschedparam(&pAttrs_tcp, &priParam);
     status |= pthread_attr_setstacksize(&pAttrs_tcp, StackSize);
 
@@ -488,8 +498,8 @@ void mainThread(void *pvParameters)
 
     /* Initial all the Peripherals */
     // GPIO_init(); // no need to initial the GPIO, already done by main_tirtos.c 
-    Display_init();
     
+    Display_init();
     display = Display_open(Display_Type_UART, NULL);
     if (display == NULL) {
         /* Failed to open display driver */
@@ -504,7 +514,7 @@ void mainThread(void *pvParameters)
     AttrTbl_Init();
 
     /* led_red on to indicate all the drivers are ready */
-    GPIO_write(LED_RED,0);
+    GPIO_write(LED_GREEN,0);
 
     /* Start the SimpleLink Host */
     pthread_attr_init(&pAttrs_spawn);
@@ -518,9 +528,15 @@ void mainThread(void *pvParameters)
         printError("Task create failed", status);
     }
 
-	/* Turn NWP on - initialize the device*/
+    /* Turn NWP on - initialize the device*/
     mode = sl_Start(0, 0, 0);
-    if (mode < 0)
+    if( mode >= 0 )
+    {
+        /* Create the displaybanner */
+        DisplayBanner(APPLICATION_NAME, APPLICATION_VERSION);
+    }
+
+    else if (mode < 0)
     {
         Display_printf(display, 0, 0,"\n\r[line:%d, error code:%d] %s\n\r", __LINE__, mode, DEVICE_ERROR);
     }

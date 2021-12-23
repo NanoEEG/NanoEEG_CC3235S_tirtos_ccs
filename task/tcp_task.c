@@ -35,6 +35,10 @@
  *    Contains BSD sockets code.
  */
 
+/*******************************************************************************
+ * INCLUDES
+ */
+
 #include <string.h>
 #include <stdint.h>
 
@@ -45,17 +49,30 @@
 #include <sys/socket.h>
 
 #include <ti/net/slnetutils.h>
-
+#include <ti/drivers/net/wifi/slnetifwifi.h>
 #include <ti/display/Display.h>
+
+#include <protocol/attr_protocol.h>
 
 #define TCPPACKETSIZE 256
 #define NUMTCPWORKERS 3
 
+/*******************************************************************************
+ *  EXTERNAL VARIABLES
+ */
 extern Display_Handle display;
+extern uint8_t *pTCP_Tx_Buff;
+extern uint8_t *pTCP_Rx_Buff;
 
-extern void *TaskCreate(void (*pFun)(), char *Name, int Priority,
-        uint32_t StackSize, uintptr_t Arg1, uintptr_t Arg2, uintptr_t Arg3);
+/*******************************************************************************
+ *  EXTERNAL FUNCITONS
+ */
+extern void *TaskCreate(void (*pFun)(), char *Name, uint32_t StackSize, 
+                        uintptr_t Arg1, uintptr_t Arg2, uintptr_t Arg3);
 
+/*******************************************************************************
+ * FUNCTIONS
+ */
 /*
  *  ======== tcpWorker ========
  *  Task to handle TCP connection. Can be multiple Tasks running
@@ -65,19 +82,20 @@ void tcpWorker(uint32_t arg0, uint32_t arg1)
 {
     int  clientfd = (int)arg0;
     int  bytesRcvd;
-    int  bytesSent;
-    char buffer[TCPPACKETSIZE];
+
 
     Display_printf(display, 0, 0, "tcpWorker: start clientfd = 0x%x\n",
             clientfd);
 
-    while ((bytesRcvd = recv(clientfd, buffer, TCPPACKETSIZE, 0)) > 0) {
-        bytesSent = send(clientfd, buffer, bytesRcvd, 0);
-        if (bytesSent < 0 || bytesSent != bytesRcvd) {
-            Display_printf(display, 0, 0, "send failed.\n");
-            break;
+    while ((bytesRcvd = recv(clientfd, pTCP_Rx_Buff, TCP_Rx_Buff_Size, 0)) > 0)
+    {
+        if( TCP_ProcessFSM(pTCP_Rx_Buff) == true ) // 控制通道帧协议处理完毕
+        {
+            send(clientfd, pTCP_Tx_Buff, (*(pTCP_Tx_Buff+1)+3), 0);
+            memset(pTCP_Rx_Buff,0x00,TCP_Rx_Buff_Size);  //!< 清空接收缓冲区
         }
     }
+
     Display_printf(display, 0, 0, "tcpWorker stop clientfd = 0x%x\n", clientfd);
 
     close(clientfd);
@@ -99,7 +117,9 @@ void tcpHandler(uint32_t arg0, uint32_t arg1)
     int                optlen = sizeof(optval);
     socklen_t          addrlen = sizeof(clientAddr);
 
-    Display_printf(display, 0, 0, "TCP Echo example started\n");
+    TCP_ProcessFSMInit(); //初始化控制通道协议处理状态机
+
+    Display_printf(display, 0, 0, "TCP control channel start\n");
 
     server = socket(AF_INET, SOCK_STREAM, 0);
     if (server == -1) {
@@ -138,8 +158,8 @@ void tcpHandler(uint32_t arg0, uint32_t arg1)
         Display_printf(display, 0, 0,
                 "tcpHandler: Creating thread clientfd = %x\n", clientfd);
 
-        thread = TaskCreate(tcpWorker, NULL, 3, 2048, (uintptr_t)clientfd,
-            0, 0);
+        // 上位机(plumberhub)TCP连接建立，创建tcpWorker线程处理数据收发事务
+        thread = TaskCreate(tcpWorker, NULL, 2048, (uintptr_t)clientfd, 0, 0);
 
         if (!thread) {
             Display_printf(display, 0, 0,

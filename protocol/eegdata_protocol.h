@@ -12,7 +12,7 @@
  */
 /* 脑电数据通道参数*/
 #define UDP_SAMPLE_FH               0x23    //!< UDP帧数据域 样起始分隔符
-#define UDP_SAMPLENUM               10      //!< UDP每包含ad样本数
+#define UDP_SAMPLENUM               10      //!< UDP每包含样本数
 
 // 发送缓冲区参数
 #ifdef Dev_Ch32
@@ -58,7 +58,7 @@ typedef struct
  */
 typedef //union
 //{
-   //uint8_t UDP_Tx_Buff[UDP_DTx_Buff_Size];
+   //uint8_t UDP_DTx_Buff[UDP_DTx_Buff_Size];
    struct
    {
        /* 数据帧头部     - 23字节*/

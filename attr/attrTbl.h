@@ -155,6 +155,10 @@ typedef struct
     
 }NETParam_t;
 
+
+
+typedef void (*pfnAttrChangeCB_t)( uint8_t AttrNum );
+
 /*********************************************************************
  * FUNCTIONS
  */
