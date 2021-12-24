@@ -33,7 +33,7 @@ uint8_t eegSamplingState;               //!< AD采样状态标志位
  */
 extern SampleTime_t *pSampleTime;
 extern Display_Handle display;
-extern sem_t UDPDataReady;
+extern sem_t UDPEEGDataReady;
 extern sem_t SampleReady;
 
 /*********************************************************************
@@ -91,13 +91,13 @@ void SampleTask(uint32_t arg0, uint32_t arg1)
         }
 
         /* 一包数据 采样中 */
-        pSampleTime->CurTimeStamp[SampleIndex] = pSampleTime->Time_40s + \
+        pSampleTime->CurTimeStamp[SampleIndex] = pSampleTime->BaseTime_10us + \
                 Timer_getCount(pSampleTime->SampleTimer)/800; //!< 获取当前时间
 
         eegSamplingState |= EEG_DATA_ACQ_EVT; //!< 更新事件：一包AD数据采集中
         eegSamplingState &= ~EEG_DATA_START_EVT; //!< 清除前序事件 - 一包ad数据开始采集
 
-        if(UDP_DataGet(SampleIndex)) //!< 获取AD数据
+        if(UDP_EEGDataGet(SampleIndex)) //!< 获取AD数据
         {
             SampleIndex++; //!< 样本序号+1
         }
@@ -110,9 +110,9 @@ void SampleTask(uint32_t arg0, uint32_t arg1)
             eegSamplingState |= EEG_DATA_CPL_EVT; //!< 更新事件：一包ad数据采集完成
             eegSamplingState &= ~EEG_DATA_ACQ_EVT; //!< 清除前序事件 - 一包AD数据采集中
 
-            if(UDP_DataProcess(pSampleTime, eegSamplingState & EEG_STOP_EVT )) //!< 完成最后的封包工作
+            if(UDP_EEGDataProcess(pSampleTime, eegSamplingState & EEG_STOP_EVT )) //!< 完成最后的封包工作
                 eegSamplingState &= ~EEG_STOP_EVT; //!< 清除前序事件 - AD数据暂停采集
-                sem_post(&UDPDataReady); //!< 释放信号量给UDP线程 将一包数据发送
+                sem_post(&UDPEEGDataReady); //!< 释放信号量给UDP线程 将一包数据发送
         }
 
     }

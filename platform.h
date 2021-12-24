@@ -15,9 +15,10 @@
 #define CONTROL_TASK_PRIORITY                 (2)
 #define TCP_WORKER_PRIORITY                   (4)
 #define SOCKET_TASK_PRIORITY                  (1)
-#define TASK_STACK_SIZE                       (4096)
+#define UDP_TASK_STACK_SIZE                   (1024)
 #define CONTROL_STACK_SIZE                    (1024)
 #define SAMPLE_STACK_SIZE                     (1024)
+#define TASK_STACK_SIZE                       (4096)
 #define SLNET_IF_WIFI_PRIO                    (5)
 #define SLNET_IF_WIFI_NAME                    "CC3235S"
 

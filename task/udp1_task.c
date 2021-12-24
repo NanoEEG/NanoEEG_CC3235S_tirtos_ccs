@@ -61,8 +61,8 @@
 /***********************************************************************
  *  EXTERNAL VARIABLES
  */
-extern UDPFrame_t UDP_DTX_Buff;     //!< UDP发送缓冲区
-extern sem_t UDPDataReady;          //!< UDP脑电数据包完毕信号量
+extern UDPDtFrame_t UDP_DTX_Buff;     //!< UDP发送缓冲区
+extern sem_t UDPEEGDataReady;       //!< UDP脑电数据包完毕信号量
 
 extern Display_Handle display;
 
@@ -72,7 +72,7 @@ extern Display_Handle display;
 
 /*
  *  ======== udp1Handler ========
- *  Transmit EEG data via UDP channel
+ *  Transmit EEG data via UDP1 channel
  *
  */
 void udp1Worker(uint32_t arg0, uint32_t arg1)
@@ -108,7 +108,7 @@ void udp1Worker(uint32_t arg0, uint32_t arg1)
     while(1)
     {
         /* 等待信号量 */
-        sem_wait(&UDPDataReady);
+        sem_wait(&UDPEEGDataReady);
 
         status = sendto(server, (uint8_t*)(&UDP_DTX_Buff),UDP_DTx_Buff_Size,0,
                        (struct sockaddr*)&clientAddr,sizeof(SlSockAddr_t));

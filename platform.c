@@ -73,10 +73,12 @@ pthread_t SampleThread = (pthread_t)NULL;
 
 //!< Driver handle
 Display_Handle display;
-//!< 系统时钟
-SampleTime_t *pSampleTime = NULL;
+//!< 时钟
+SampleTime_t *pSampleTime = NULL;   //!< 系统时钟对象（获取脑电数据样本时间戳，事件标签时间戳）
+Timer_Handle pSyncTime = NULL;     //!< 同步时钟（应用层使能）
 //!< 信号量
-sem_t UDPDataReady;
+sem_t UDPEEGDataReady;
+sem_t UDPEvtDataReady;
 sem_t SampleReady;
 
 /********************************************************************************
@@ -91,7 +93,7 @@ extern SlDeviceVersion_t ver; //!< 仪器参数
 extern void tcpHandler(uint32_t arg0, uint32_t arg1);
 extern void tcpWorker(uint32_t arg0, uint32_t arg1);
 extern void udp1Worker(uint32_t arg0, uint32_t arg1);
-//extern void udp2Worker(uint32_t arg0, uint32_t arg1);
+extern void udp2Worker(uint32_t arg0, uint32_t arg1);
 extern void SampleTask(void* arg0 , void* arg1);
 extern void controlTask(uint32_t arg0, uint32_t arg1);
 
@@ -192,7 +194,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 pthread_attr_init(&pAttrs);
                 priParam.sched_priority = SOCKET_TASK_PRIORITY;
                 status = pthread_attr_setschedparam(&pAttrs, &priParam);
-                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+                status |= pthread_attr_setstacksize(&pAttrs, UDP_TASK_STACK_SIZE);
                 status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
                 if(status)
                 {
@@ -227,18 +229,18 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                     printError("sample task create failed", status);
                 }
 
-//                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
-//                pthread_attr_init(&pAttrs);
-//                priParam.sched_priority = SOCKET_TASK_PRIORITY;
-//                status = pthread_attr_setschedparam(&pAttrs, &priParam);
-//                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
-//                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
-//                if(status)
-//                {
-//                    printError("udp2Thread create failed", status);
-//                }
-//                // update EventDataPort Attr
-//                netparam.EventDataPort = UDP2PORT;
+                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, UDP_TASK_STACK_SIZE);
+                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
+                if(status)
+                {
+                    printError("udp2Thread create failed", status);
+                }
+                // update EventDataPort Attr
+                netparam.EvtdataPort = UDP2PORT;
 
             }
             break;
@@ -562,6 +564,9 @@ void mainThread(void *pvParameters)
     
     /* SampleTime work as the system timestamp */
     pSampleTime = SampleTimestamp_Service_Init(&timerparams);
+    /* SyncTimer */
+    pSyncTime = Sync_Init();
+    Timer_start(pSampleTime->SampleTimer); // 测试版本
 
     /* Initial ads1299 */
     ADS1299_Init(0);
@@ -571,7 +576,8 @@ void mainThread(void *pvParameters)
     AttrTbl_Init();
 
     /* Initializes signals for all tasks */
-    sem_init(&UDPDataReady, 0, 0);
+    sem_init(&UDPEEGDataReady, 0, 0);
+    sem_init(&UDPEvtDataReady, 0, 0);
     sem_init(&SampleReady, 0, 0);
 
     /* led_green on to indicate all the drivers are ready */

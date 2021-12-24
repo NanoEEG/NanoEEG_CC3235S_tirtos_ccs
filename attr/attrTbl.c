@@ -37,7 +37,7 @@ SlDeviceVersion_t ver= {0};
 static bool     sampling;
 static bool     impMeas;
 static uint8_t  impMeas_mode;
-static float    impMeasval[16]; //TODO 读取该属性有bug会死机 尝试增大TCP_Tx_Buff_Size
+static float    impMeasval[16];
 
 /* 通信参数 */
 NETParam_t netparam;

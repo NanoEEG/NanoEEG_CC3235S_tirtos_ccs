@@ -19,10 +19,8 @@
 #include <stdbool.h>
 
 #include <ti/drivers/net/wifi/slnetifwifi.h>
-#include <ti/display/Display.h>
 
 #include "eegdata_protocol.h"
-#include <utility/stateMachine.h>
 #include <service/ads1299.h>
 
 
@@ -34,7 +32,7 @@ static uint32_t UDPNum;                 //!< UDP包累加滚动码
 /*********************************************************************
  *  GLOBAL VARIABLES
  */
-UDPFrame_t UDP_DTX_Buff;                //!< UDP发送缓冲区
+UDPDtFrame_t UDP_DTX_Buff;                //!< UDP发送缓冲区
 
 /*********************************************************************
  *  LOCAL FUNCTIONS
@@ -52,7 +50,7 @@ static void UDP_DataFrameHeaderGet()
     extern SlDeviceVersion_t ver;
 
     /* 设备ID */
-    UDP_DTX_Buff.sampleheader.DevID = ver.ChipId;//TODO check if right
+    UDP_DTX_Buff.sampleheader.DevID = ver.ChipId;
 
     /* 本UDP包总样本数 */
     UDP_DTX_Buff.sampleheader.UDPSampleNum[0] = UDP_SAMPLENUM;
@@ -81,7 +79,7 @@ static void UDP_DataFrameHeaderGet()
     \return true - 读取AD数据成功
  *          false - 异常
  */
-bool UDP_DataGet(uint8_t SampleIndex)
+bool UDP_EEGDataGet(uint8_t SampleIndex)
 {
     ADS1299_ReadResult((uint8_t *)&(UDP_DTX_Buff.sampledata[SampleIndex].ChannelVal[0]));  //!< 样本每通道量化值
     //ADS1299_ReadResult((uint8_t *)&(UDP_DTx_Buff[28*SampleIndex])); //for debug
@@ -101,7 +99,7 @@ bool UDP_DataGet(uint8_t SampleIndex)
     \return success - UDP打包数据完毕
             false - 异常
  */
-bool UDP_DataProcess(SampleTime_t *pSampleTime,bool reSampleFlag)
+bool UDP_EEGDataProcess(SampleTime_t *pSampleTime,bool reSampleFlag)
 {
     uint8_t Index;
 

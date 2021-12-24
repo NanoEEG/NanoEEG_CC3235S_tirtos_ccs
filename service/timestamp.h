@@ -23,15 +23,17 @@
 /*!
     \brief  SampleTime_t
 
-    每样本时间戳 结构体
+    每样本精密时间戳 结构体
  */
 typedef struct
 {
-    Timer_Handle SampleTimer;               //!< 每样本计时器
-    uint32_t Time_40s;                      //!< 计时器溢出次数*4000000
-    uint32_t CurTimeStamp[10];              //!< 每样本当前时间
+    Timer_Handle    SampleTimer;        //!< 系统定时器
+    uint32_t        BaseTime_10us;      //!< 基础时间/10us = 计时器溢出次数*4000000
+    uint32_t        CurTimeStamp[10];   //!< 每样本当前时间
+    uint32_t        LastSyncTime_10us;  //!< 最近一次同步时间/10us Tsoc
 
 }SampleTime_t;
+
 
 /*********************************************************************
  * FUNCTIONS

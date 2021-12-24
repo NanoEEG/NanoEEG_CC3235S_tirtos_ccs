@@ -16,14 +16,19 @@
 #include "ti_drivers_config.h"
 
 /*******************************************************************
- *  FUNCTIONS
+ *  LOCAL VARIABLES
  */
 static SampleTime_t SampleTime;
+
+/*******************************************************************
+ *  FUNCTIONS
+ */
 
 static void SampleTimerCB(Timer_Handle handle, int_fast16_t status);
 
 /*!
      \brief SampleTimestamp_Service_Init
+
      每样本增量时间戳初始化
 
      \return 每样本时间戳结构体指针
@@ -65,5 +70,5 @@ SampleTime_t* SampleTimestamp_Service_Init(Timer_Params *params)
  */
 static void SampleTimerCB(Timer_Handle handle, int_fast16_t status)
 {
-    SampleTime.Time_40s += 4000000;
+    SampleTime.BaseTime_10us += 4000000;
 }
