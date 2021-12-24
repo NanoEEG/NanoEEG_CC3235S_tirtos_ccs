@@ -694,7 +694,7 @@ bool ADS1299_SetSamplerate(uint8_t dev, uint16_t Samplerate){
         break;
 
         default:
-            valset = 0x96;
+            valset = 0x94; //default 1kHz
         break;
     }
 
@@ -762,7 +762,7 @@ bool ADS1299_SetGain(uint8_t dev, uint8_t gain){
          break;
 
          default:
-             ChVal.control_bit.gain = 6;
+             ChVal.control_bit.gain = 6; //default x24
          break;
      }
      ChVal.control_bit.pd = 0;

@@ -44,7 +44,7 @@ NETParam_t netparam;
 uint8_t samplenum = UDP_SAMPLENUM;
 
 /* 采样参数 */
-static uint16_t curSamprate = SPS_250;
+static uint16_t curSamprate = SPS_1K;
 static const uint16_t samplerate_tbl[]={SPS_250,SPS_500,SPS_1K,SPS_2K};
 static uint8_t curGain = GAIN_X24;
 static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
