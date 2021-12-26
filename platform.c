@@ -566,7 +566,6 @@ void mainThread(void *pvParameters)
     pSampleTime = SampleTimestamp_Service_Init(&timerparams);
     /* SyncTimer */
     pSyncTime = Sync_Init();
-    Timer_start(pSampleTime->SampleTimer); // 测试版本
 
     /* Initial ads1299 */
     ADS1299_Init(0);

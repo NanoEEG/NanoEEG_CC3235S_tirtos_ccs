@@ -36,6 +36,8 @@ extern SampleTime_t *pSampleTime;
 extern uint8_t eegSamplingState;
 extern Display_Handle display;
 
+extern Timer_Handle pSyncTime; // 测试版本: UDP2线程使能时钟
+
 /*********************************************************************
  *  Callbacks
  */
@@ -83,32 +85,36 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
     switch(AttrChangeNum)
     {
         case SAMPLING:
-// 测试版本
-//            App_GetAttr(SAMPLING,pValue); //!< 获取属性值
-//
-//            if(*(uint8_t*)pValue == SAMPLE_START )
-//            {
-//                //!< 开始计时
-//                if (Timer_start(pSampleTime->SampleTimer) == Timer_STATUS_ERROR) {
-//                    /* Failed to start timer */
-//                    while (1) {}
-//                }
-//
-//                eegSamplingState |= EEG_DATA_START_EVT; //!< 标识采样状态: 开始采样
-//
-//                /* ads1299 开始采集 */
-//                ADS1299_Sampling_Control(1);
-//
-//            }else
-//            {
-//                Timer_stop(pSampleTime->SampleTimer); //!< 停止计时
-//
-//                eegSamplingState |= EEG_STOP_EVT; //!< 标识采样状态
-//
-//                /* ads1299 停止采集 */
-//                ADS1299_Sampling_Control(0);
-//
-//            }
+
+            App_GetAttr(SAMPLING,pValue); //!< 获取属性值
+
+            if(*(uint8_t*)pValue == SAMPLE_START )
+            {
+                //!< 开始计时
+                if (Timer_start(pSampleTime->SampleTimer) == Timer_STATUS_ERROR) {
+                    /* Failed to start timer */
+                    while (1) {}
+                }
+
+                eegSamplingState |= EEG_DATA_START_EVT; //!< 标识采样状态: 开始采样
+
+                Timer_start(pSyncTime); //测试版本
+
+                /* ads1299 开始采集 */
+                ADS1299_Sampling_Control(1);
+
+            }else
+            {
+                Timer_stop(pSampleTime->SampleTimer); //!< 停止计时
+
+                eegSamplingState |= EEG_STOP_EVT; //!< 标识采样状态
+
+                Timer_stop(pSyncTime); //测试版本
+
+                /* ads1299 停止采集 */
+                ADS1299_Sampling_Control(0);
+
+            }
         break;
 
         case CURSAMPLERATE:

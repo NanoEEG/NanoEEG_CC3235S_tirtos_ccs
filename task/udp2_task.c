@@ -68,7 +68,6 @@ extern UDPEvtFrame_t UDP_EvtTX_Buff;    //!< UDP发送缓冲区
 extern sem_t UDPEvtDataReady;           //!< UDP脑电数据包完毕信号量
 
 extern Display_Handle display;
-extern Timer_Handle pSyncTime; // 测试版本: UDP2线程使能时钟
 
 /***********************************************************************
  * FUNCTIONS
@@ -107,8 +106,6 @@ void udp2Worker(uint32_t arg0, uint32_t arg1)
     clientAddr.sin_family = AF_INET;
     clientAddr.sin_port = htons(arg0); //事件标签数据通道端口
     clientAddr.sin_addr.s_addr = htonl(SL_IPV4_VAL(255,255,255,255)); //局域网广播
-
-    Timer_start(pSyncTime); //测试版本
 
     while(1)
     {
