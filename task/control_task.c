@@ -36,7 +36,7 @@ extern SampleTime_t *pSampleTime;
 extern uint8_t eegSamplingState;
 extern Display_Handle display;
 
-extern Timer_Handle pSyncTime; // 测试版本: UDP2线程使能时钟
+extern Timer_Handle pSyncTime;
 
 /*********************************************************************
  *  Callbacks
@@ -95,10 +95,9 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
                     /* Failed to start timer */
                     while (1) {}
                 }
+                Timer_start(pSyncTime); //使能同步时钟
 
                 eegSamplingState |= EEG_DATA_START_EVT; //!< 标识采样状态: 开始采样
-
-                Timer_start(pSyncTime); //测试版本
 
                 /* ads1299 开始采集 */
                 ADS1299_Sampling_Control(1);
@@ -106,10 +105,9 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
             }else
             {
                 Timer_stop(pSampleTime->SampleTimer); //!< 停止计时
+                Timer_stop(pSyncTime); //停止时钟
 
                 eegSamplingState |= EEG_STOP_EVT; //!< 标识采样状态
-
-                Timer_stop(pSyncTime); //测试版本
 
                 /* ads1299 停止采集 */
                 ADS1299_Sampling_Control(0);

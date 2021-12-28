@@ -29,11 +29,6 @@
 UDPEvtFrame_t UDP_EvtTX_Buff;                //!< UDP发送缓冲区
 
 /*********************************************************************
- *  EXTERNAL VARIABLES
- */
-
-
-/*********************************************************************
  *  LOCAL FUNCTIONS
  */
 
@@ -43,7 +38,7 @@ UDPEvtFrame_t UDP_EvtTX_Buff;                //!< UDP发送缓冲区
     事件标签数据通道 数据帧头部静态变量获取
     只在第一次帧头封包时调用本函数,帧头部的静态变量在采集过程中不需要更新。
  */
-void UDP_DataFrameHeaderGet()
+static void UDP_DataFrameHeaderGet()
 {
 
     extern SlDeviceVersion_t ver;
@@ -56,7 +51,14 @@ void UDP_DataFrameHeaderGet()
 /*********************************************************************
  *  FUNCTIONS
  */
+void UDP_DataProcess(uint32_t RecvTimestamp,uint16_t delay, uint8_t type){
 
+    UDP_DataFrameHeaderGet();
+
+    UDP_EvtTX_Buff.Evtdata.evtType = type;
+    UDP_EvtTX_Buff.Evtdata.Timestamp = RecvTimestamp - delay;
+
+}
 
 
 

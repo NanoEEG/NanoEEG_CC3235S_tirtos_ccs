@@ -61,6 +61,6 @@ typedef struct
 /**********************************************************************
  * FUNCTIONS
  */
-void UDP_DataFrameHeaderGet();
+void UDP_DataProcess(uint32_t RecvTimestamp,uint16_t delay, uint8_t type);
 
 #endif  /* __EVTDATA_PROTOCOL_H */

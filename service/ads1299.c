@@ -16,6 +16,9 @@
 /* TI-DRIVERS Header files */
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/GPIO.h>
+
+#include <ti/devices/cc32xx/driverlib/utils.h>
+
 #include "ti_drivers_config.h"
 
 #include "ads1299.h"
@@ -32,7 +35,7 @@ SPI_Handle      masterSpi;
 
 static void ADS1299_Reset(uint8_t dev);
 static void ADS1299_PowerOn(uint8_t dev);
-static void WaitUs(int iWaitUs);
+static void WaitUs(unsigned long  iWaitUs);
 static void ADS1299_SendCommand(uint8_t command);
 static void ADS1299_WriteREG(uint8_t dev, uint8_t address, uint8_t value);
 static uint8_t ADS1299_ReadREG(uint8_t dev, uint8_t address);
@@ -55,7 +58,7 @@ static uint8_t ADS1299_ReadREG(uint8_t dev, uint8_t address);
  *     - None
  */
 /****************************************************************/
-static void WaitUs(int iWaitUs)
+static void WaitUs(unsigned long iWaitUs)
 {
     // delay 1us means 1*80/3 `= 27
     UtilsDelay(27*iWaitUs);
