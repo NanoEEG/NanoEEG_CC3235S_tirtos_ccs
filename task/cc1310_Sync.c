@@ -15,13 +15,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 /* TI-DRIVERS Header files */
 #include "ti_drivers_config.h"
+#include <ti/devices/cc32xx/driverlib/i2c.h>
+#include <ti/devices/cc32xx/inc/hw_i2c.h>
 
 /* TI-RTOS Header files */
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/I2C.h>
+#include <ti/drivers/Timer.h>
+#include <ti/display/Display.h>
 
 /* POSIX Header files */
 #include <semaphore.h>
@@ -29,6 +34,17 @@
 /* User defined Header files */
 #include <protocol/evtdata_protocol.h>
 #include <attr/attrTbl.h>
+
+/*********************************************************************
+ *  MACROS
+ */
+// Define the slave address of cc1310 on NanoEEG
+#define CC1310_ADDR     0x33
+// For math
+#define INT_MAX         4294967296
+#define RAT_1SCNT       4000000
+#define RAT_SYNCNT      4000000
+#define CC3235_1SCNT    100000
 
 /*********************************************************************
  *  GLOBAL VARIABLES
@@ -42,6 +58,7 @@ static uint32_t         delay;
 static uint8_t          I2C_BUFF[16];
 
 Timer_Handle pSyncTime = NULL;      //!< 同步时钟
+extern Display_Handle display;
 
 /*********************************************************************
  *  EXTERNAL VARIABLES
@@ -72,7 +89,7 @@ static void SyncOutputHandle(Timer_Handle handle, int_fast16_t status)
     pSampleTime->LastSyncTime_10us = pSampleTime->BaseTime_10us + \
             Timer_getCount(pSampleTime->SampleTimer)/800;
 
-    GPIO_toggle(LED_RED_GPIO); // CC1310 RAT should set both edge as input
+    GPIO_toggle(CC1310_Sync_PWM); // CC1310 RAT should set both edge as input
 }
 
 /*!
@@ -87,6 +104,7 @@ static void SyncOutputHandle(Timer_Handle handle, int_fast16_t status)
 */
 static void EventRecvHandle(uint_least8_t index)
 {
+    GPIO_toggle(LED_RED_GPIO); // RED_LED to indicate working well
     /* 释放信号量 */
     sem_post(&EvtDataRecv);
 }
@@ -102,10 +120,75 @@ static void EventRecvHandle(uint_least8_t index)
     \return void
 
 */
-static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata)
+static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
 {
+    bool ret = true;
+    uint32_t errstate;
+    uint8_t datanum = num;
+    uint8_t dataget = 0;
 
-    return;
+    I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
+    uint32_t I2C_BASE = 0x40020000;// = hwAttrs->baseAddr; //TODO bug
+
+    /* Master RECEIVE of Multiple Data Bytes */
+
+    /* Write Slave Address to I2CMSA, receive mode */
+    I2CMasterSlaveAddrSet( I2C_BASE,                \
+                           CC1310_ADDR,             \
+                           true);  ///< true - I2C read
+
+    /* Write ---01011 to I2C_O_MCS */
+    I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_START);
+
+    /* wait until no busy & no error */
+    while(I2CMasterBusy(I2C_BASE) == true);
+    errstate = I2CMasterErr(I2C_BASE);
+
+    if(errstate == I2C_MASTER_ERR_NONE){
+        /* read one byte from I2CMDR */
+        *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
+        dataget++;
+    }
+
+    while( dataget!= (datanum-1) && datanum!=1 ){
+        /* Write ---01001 to I2CMCS */
+        I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+
+        /* wait until no busy & no error */
+        while(I2CMasterBusy(I2C_BASE) == true);
+        errstate = I2CMasterErr(I2C_BASE);
+
+        if(errstate == I2C_MASTER_ERR_NONE){
+            /* read one byte from I2CMDR */
+            *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
+            dataget++;
+        }else
+            goto errorService;
+    }
+
+    /* Write ---00101 to I2CMCS */
+    I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_FINISH);
+    /* wait until no busy & no error */
+    while(I2CMasterBusy(I2C_BASE) == true);
+    errstate = I2CMasterErr(I2C_BASE);
+
+    if(errstate == I2C_MASTER_ERR_NONE){
+        /* read one byte from I2CMDR */
+        *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
+    }else
+        goto errorService;
+
+errorService:
+    if( errstate&I2C_MCS_ARBLST ){
+        /* Write ---0-100 to I2CMCS */
+        I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
+        ret = false;
+    }
+    else
+        ret = false;
+
+
+     return ret;
 }
 
 /*!
@@ -121,6 +204,15 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata)
 static uint32_t Eventbacktracking(SampleTime_t* pSampleTime, uint32_t Tror, uint32_t Tsor)
 {
     uint32_t ret = 0;
+    uint32_t t = 0;
+
+    if(Tror>Tsor || Tror==Tsor){
+        t = (Tror-Tsor)/(RAT_1SCNT);
+    }else
+        t = (Tsor + RAT_SYNCNT - INT_MAX - Tror)/(RAT_1SCNT);
+
+
+    ret = pSampleTime->LastSyncTime_10us + t*CC3235_1SCNT;
 
     return ret;
 }
@@ -152,7 +244,7 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         sem_wait(&EvtDataRecv);
 
         /* I2C 读取事件标签 */
-        cc1310_EventGet(i2cHandle,I2C_BUFF);
+        cc1310_EventGet(i2cHandle,I2C_BUFF,10);
         memcpy(&Tror, (uint8_t*)&I2C_BUFF[1],4);
         memcpy(&Tsor, (uint8_t*)&I2C_BUFF[5],4);
         type = I2C_BUFF[9];

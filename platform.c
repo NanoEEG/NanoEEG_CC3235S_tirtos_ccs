@@ -252,7 +252,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 priParam.sched_priority = SAMPLE_TASK_PRIORITY;
                 status = pthread_attr_setschedparam(&pAttrs, &priParam);
                 status |= pthread_attr_setstacksize(&pAttrs, SYNC_STACK_SIZE);
-                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))SyncTask, NULL);
+                status = pthread_create(&SyncThread, &pAttrs, (void *(*)(void *))SyncTask, NULL);
                 if(status)
                 {
                     printError("SyncThread create failed", status);

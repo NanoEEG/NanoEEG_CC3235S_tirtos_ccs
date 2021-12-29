@@ -23,3 +23,7 @@ cccc
     其中，N*r*是1s同步周期对应的RAT的计数值。由于RAT在一次脑电实验的数据采集过程中会发生溢出，导致最近一次同步时间戳值小于事件标签接收时间戳，在计算时间差时需要考虑溢出的情况。在已知系统时间戳精度为10us，通过下式可以求出以cc3235S的时钟为基准的事件标签接收时间戳（`RecvTimestamp of cc32325s`, T*roc*) ）：
     
     $\qquad \qquad \qquad \qquad \qquad  Troc=∆t \times\;10^5 +Tsoc $
+
+
+
+> 板载cc1310
