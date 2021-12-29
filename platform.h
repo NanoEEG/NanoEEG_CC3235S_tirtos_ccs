@@ -21,9 +21,9 @@
 #define SLNET_IF_WIFI_NAME                    "CC3235S"
 
 //!< 路由参数
-#define SSID_NAME                             "TUNERL3092"              /* AP SSID */
+#define SSID_NAME                             "TUNERL-306"              /* AP SSID */
 #define SECURITY_TYPE                         SL_WLAN_SEC_TYPE_WPA_WPA2 /* Security type could be SL_WLAN_SEC_TYPE_OPEN */
-#define SECURITY_KEY                          "TUNERL2020"              /* Password of the secured AP */
+#define SECURITY_KEY                          "TUNERL2021"              /* Password of the secured AP */
 
 //!< Socket参数
 #define TCPPORT                               (7001)                    /* TCP控制通道端口号 */

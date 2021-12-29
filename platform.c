@@ -36,24 +36,36 @@
 #include <ti/display/Display.h>
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/SPI.h>
+#include <ti/drivers/I2C.h>
 #include <ti/drivers/Timer.h>
 
 // TI-Driver includes
 #include "ti_drivers_config.h"
 #include "pthread.h"
+/* POSIX Header files */
+#include <semaphore.h>
 
 // User Services & tasks
 #include "platform.h"
 
+pthread_t SyncThread = (pthread_t)NULL;
 pthread_t tcpThread = (pthread_t)NULL;
 pthread_t spawn_thread = (pthread_t)NULL;
 pthread_t tcpworker_thread = (pthread_t)NULL;
 int32_t             mode;
 Display_Handle display;
 
+//!< I2C handle
+I2C_Handle i2cHandle = NULL;        //!< 系统中多个外设共用，在全局初始化
+
+sem_t EvtDataRecv;
+
 extern void tcpHandler(uint32_t arg0, uint32_t arg1);
 extern void tcpWorker(uint32_t arg0, uint32_t arg1);
 extern int32_t ti_net_SlNet_initConfig();
+extern void SyncTask(uint32_t arg0, uint32_t arg1);
+
+
 
 /*
  *  ======== printError ========
@@ -130,6 +142,19 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 {
                     printError("Task create failed", status);
                 }
+
+                /*  SyncThread with acess function SyncTask to deal with event Sync */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SAMPLE_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, 1024);
+                status = pthread_create(&SyncThread, &pAttrs, (void *(*)(void *))SyncTask, NULL);
+                if(status)
+                {
+                    printError("SyncThread create failed", status);
+                }
+
+
             }
             break;
         default:
@@ -339,21 +364,29 @@ void mainThread(void *pvParameters)
     pthread_attr_t      pAttrs_spawn;
     struct sched_param  priParam;
 
+    GPIO_init();
     SPI_init();
     Display_init();
+    I2C_init();
+
+
     display = Display_open(Display_Type_UART, NULL);
     if (display == NULL) {
         /* Failed to open display driver */
         while(1);
     }
 
-    /* led on */
-    GPIO_write(Status_LED_1,0);
+    // initialize optional I2C bus parameters
+    I2C_Params params;
+    I2C_Params_init(&params);
+    params.bitRate = I2C_400kHz;
+    // Open I2C bus for usage
+    I2C_Handle i2cHandle = I2C_open(COMMON_I2C, &params);
 
-    Timer_Handle SyncTimer;
-    /* SyncTimer */
-    SyncTimer = Sync_Init();
-    Timer_start(SyncTimer);
+    sem_init(&EvtDataRecv, 0, 0);
+
+    /* led on */
+    GPIO_write(Status_LED_1_GPIO,0);
 
     /* Start the SimpleLink Host */
     pthread_attr_init(&pAttrs_spawn);
