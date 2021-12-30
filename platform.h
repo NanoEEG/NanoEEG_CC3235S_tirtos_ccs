@@ -24,9 +24,9 @@
 #define SLNET_IF_WIFI_NAME                    "CC3235S"
 
 //!< Router Param
-#define SSID_NAME                             "NanoEEG"              /* AP SSID */
+#define SSID_NAME                             "TUNERL-306"              /* AP SSID */
 #define SECURITY_TYPE                         SL_WLAN_SEC_TYPE_WPA_WPA2 /* Security type could be SL_WLAN_SEC_TYPE_OPEN */
-#define SECURITY_KEY                          "TUNERL2022"              /* Password of the secured AP */
+#define SECURITY_KEY                          "TUNERL2021"              /* Password of the secured AP */
 
 //!< Socket Param
 #define TCPPORT                               (7001)                    

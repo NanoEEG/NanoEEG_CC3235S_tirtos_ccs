@@ -127,7 +127,7 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
     uint8_t datanum = num;
     uint8_t dataget = 0;
 
-    I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
+    //I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
     uint32_t I2C_BASE = 0x40020000;// = hwAttrs->baseAddr; //TODO bug
 
     /* Master RECEIVE of Multiple Data Bytes */
@@ -150,7 +150,8 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
         dataget++;
     }
 
-    while( dataget!= (datanum-1) && datanum!=1 ){
+    while(dataget<datanum){
+
         /* Write ---01001 to I2CMCS */
         I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_CONT);
 
@@ -162,12 +163,12 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
             /* read one byte from I2CMDR */
             *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
             dataget++;
-        }else
-            goto errorService;
+        }//else
+            //goto errorService;
     }
 
     /* Write ---00101 to I2CMCS */
-    I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_FINISH);
+    I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
     /* wait until no busy & no error */
     while(I2CMasterBusy(I2C_BASE) == true);
     errstate = I2CMasterErr(I2C_BASE);
@@ -175,18 +176,18 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
     if(errstate == I2C_MASTER_ERR_NONE){
         /* read one byte from I2CMDR */
         *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
-    }else
-        goto errorService;
+    }//else
+//        goto errorService;
 
-errorService:
-    if( errstate&I2C_MCS_ARBLST ){
-        /* Write ---0-100 to I2CMCS */
-        I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
-        ret = false;
-    }
-    else
-        ret = false;
-
+//errorService:
+//    if( errstate&I2C_MCS_ARBLST ){
+//        /* Write ---0-100 to I2CMCS */
+//        I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
+//        ret = false;
+//    }
+//    else
+//        ret = false;
+//
 
      return ret;
 }
@@ -237,6 +238,7 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
 
     /* Register interrupt for the CC1310_WAKEUP (cc1310 trigger) */
     GPIO_setCallback(CC1310_WAKEUP, EventRecvHandle);
+    GPIO_enableInt(CC1310_WAKEUP);
 
     while(1){
 
@@ -245,9 +247,12 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
 
         /* I2C 读取事件标签 */
         cc1310_EventGet(i2cHandle,I2C_BUFF,10);
+
         memcpy(&Tror, (uint8_t*)&I2C_BUFF[1],4);
         memcpy(&Tsor, (uint8_t*)&I2C_BUFF[5],4);
         type = I2C_BUFF[9];
+
+        //Display_printf(display, 0, 0,"Tror %x Tsor %x type %x \r\n",Tror,Tsor,type);
 
         /* 事件标签时间戳回溯 */
         Troc = Eventbacktracking(pSampleTime,Tror,Tsor);
@@ -255,6 +260,7 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         App_GetAttr(TRIGDELAY, &delay);
         UDP_DataProcess(Troc, delay, type);
 
+        Display_printf(display, 0, 0,"Tror %u. Tsor %u. type %x Troc %u.\r\n",Tror,Tsor,type,Troc);
         /* 释放信号量，发送事件标签给上位机 */
         sem_post(&UDPEvtDataReady);
     }

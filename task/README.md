@@ -25,5 +25,3 @@ cccc
     $\qquad \qquad \qquad \qquad \qquad  Troc=∆t \times\;10^5 +Tsoc $
 
 
-
-> 板载cc1310
