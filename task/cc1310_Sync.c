@@ -21,6 +21,7 @@
 #include "ti_drivers_config.h"
 #include <ti/devices/cc32xx/driverlib/i2c.h>
 #include <ti/devices/cc32xx/inc/hw_i2c.h>
+#include <ti/devices/cc32xx/driverlib/utils.h>
 
 /* TI-RTOS Header files */
 #include <ti/drivers/GPIO.h>
@@ -46,6 +47,8 @@
 #define RAT_SYNCNT      4000000
 #define CC3235_1SCNT    100000
 
+#define GET_LOW_BYTE0(x) ((x >>  0) & 0x000000ff) /* 获取第0个字节 */
+
 /*********************************************************************
  *  GLOBAL VARIABLES
  */
@@ -55,7 +58,7 @@ static uint32_t         Tsor;
 static uint32_t         Troc;
 static uint8_t          type;
 static uint32_t         delay;
-static uint8_t          I2C_BUFF[16];
+uint32_t          I2C_BUFF[16];
 
 Timer_Handle pSyncTime = NULL;      //!< 同步时钟
 extern Display_Handle display;
@@ -104,7 +107,7 @@ static void SyncOutputHandle(Timer_Handle handle, int_fast16_t status)
 */
 static void EventRecvHandle(uint_least8_t index)
 {
-    GPIO_toggle(LED_RED_GPIO); // RED_LED to indicate working well
+    //GPIO_toggle(LED_RED_GPIO); // RED_LED to indicate working well
     /* 释放信号量 */
     sem_post(&EvtDataRecv);
 }
@@ -120,13 +123,13 @@ static void EventRecvHandle(uint_least8_t index)
     \return void
 
 */
-static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
+static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t num)
 {
     bool ret = true;
     uint32_t errstate;
     uint8_t datanum = num;
     uint8_t dataget = 0;
-
+    int i = 1;
     //I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
     uint32_t I2C_BASE = 0x40020000;// = hwAttrs->baseAddr; //TODO bug
 
@@ -136,7 +139,6 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
     I2CMasterSlaveAddrSet( I2C_BASE,                \
                            CC1310_ADDR,             \
                            true);  ///< true - I2C read
-
     /* Write ---01011 to I2C_O_MCS */
     I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_START);
 
@@ -146,12 +148,13 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
 
     if(errstate == I2C_MASTER_ERR_NONE){
         /* read one byte from I2CMDR */
-        *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
+        I2C_BUFF[0] = GET_LOW_BYTE0(I2CMasterDataGet(I2C_BASE));
         dataget++;
     }
 
-    while(dataget<datanum){
+    for(i=1;i<9;i++){
 
+        UtilsDelay(500);
         /* Write ---01001 to I2CMCS */
         I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_CONT);
 
@@ -161,35 +164,26 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
 
         if(errstate == I2C_MASTER_ERR_NONE){
             /* read one byte from I2CMDR */
-            *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
-            dataget++;
-        }//else
-            //goto errorService;
+
+            I2C_BUFF[i]= GET_LOW_BYTE0(I2CMasterDataGet(I2C_BASE));
+        }
     }
 
+
+    UtilsDelay(500);
     /* Write ---00101 to I2CMCS */
-    I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    I2CMasterControl(I2C_BASE,0x00000001);
+
     /* wait until no busy & no error */
     while(I2CMasterBusy(I2C_BASE) == true);
     errstate = I2CMasterErr(I2C_BASE);
 
     if(errstate == I2C_MASTER_ERR_NONE){
         /* read one byte from I2CMDR */
-        *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
-    }//else
-//        goto errorService;
-
-//errorService:
-//    if( errstate&I2C_MCS_ARBLST ){
-//        /* Write ---0-100 to I2CMCS */
-//        I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
-//        ret = false;
-//    }
-//    else
-//        ret = false;
-//
-
-     return ret;
+        I2C_BUFF[9] = GET_LOW_BYTE0(I2CMasterDataGet(I2C_BASE));
+    }
+    UtilsDelay(500);
+    I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_STOP);
 }
 
 /*!
@@ -246,23 +240,27 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         sem_wait(&EvtDataRecv);
 
         /* I2C 读取事件标签 */
-        cc1310_EventGet(i2cHandle,I2C_BUFF,10);
+        cc1310_EventGet(i2cHandle,10);
 
-        memcpy(&Tror, (uint8_t*)&I2C_BUFF[1],4);
-        memcpy(&Tsor, (uint8_t*)&I2C_BUFF[5],4);
-        type = I2C_BUFF[9];
+        //memcpy(&Tror, &I2C_BUFF[1],4);
+        //memcpy(&Tsor, &I2C_BUFF[5],4);
+        //type = I2C_BUFF[9];
 
         //Display_printf(display, 0, 0,"Tror %x Tsor %x type %x \r\n",Tror,Tsor,type);
+
+        Display_printf(display, 0, 0,"RECV %x,%x,%x,%x,%x,%x,%x,%x,%x,%x \r\n",\
+                       I2C_BUFF[0],I2C_BUFF[1],I2C_BUFF[2],I2C_BUFF[3],I2C_BUFF[4],
+                       I2C_BUFF[5],I2C_BUFF[6],I2C_BUFF[7],I2C_BUFF[8],I2C_BUFF[9]);
 
         /* 事件标签时间戳回溯 */
         Troc = Eventbacktracking(pSampleTime,Tror,Tsor);
         /* 协议封包 */
         App_GetAttr(TRIGDELAY, &delay);
         UDP_DataProcess(Troc, delay, type);
-
-        Display_printf(display, 0, 0,"Tror %u. Tsor %u. type %x Troc %u.\r\n",Tror,Tsor,type,Troc);
+        //Display_printf(display, 0, 0,"Tror %x. Tsor %x. type %x Troc %x.\r\n",Tror,Tsor,type,Troc);
         /* 释放信号量，发送事件标签给上位机 */
         sem_post(&UDPEvtDataReady);
+        memset(I2C_BUFF,0,sizeof(I2C_BUFF));
     }
 
 }

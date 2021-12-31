@@ -18,7 +18,7 @@
 #define UDP_TASK_STACK_SIZE                   (1024)
 #define CONTROL_STACK_SIZE                    (1024)
 #define SAMPLE_STACK_SIZE                     (1024)
-#define SYNC_STACK_SIZE                       (1024)
+#define SYNC_STACK_SIZE                       (2048)
 #define TASK_STACK_SIZE                       (4096)
 #define SLNET_IF_WIFI_PRIO                    (5)
 #define SLNET_IF_WIFI_NAME                    "CC3235S"
