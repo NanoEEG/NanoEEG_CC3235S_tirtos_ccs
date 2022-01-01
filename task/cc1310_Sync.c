@@ -20,6 +20,7 @@
 #include "ti_drivers_config.h"
 
 #include <ti/devices/cc32xx/driverlib/i2c.h>
+#include <ti/devices/cc32xx/driverlib/utils.h>
 #include <ti/devices/cc32xx/inc/hw_i2c.h>
 
 /* TI-RTOS Header files */
@@ -27,7 +28,7 @@
 #include <ti/drivers/I2C.h>
 #include <ti/drivers/Timer.h>
 #include <ti/display/Display.h>
-
+#include <ti/drivers/dpl/HwiP.h>
 /* POSIX Header files */
 #include <semaphore.h>
 
@@ -51,7 +52,6 @@ Timer_Handle pSyncTime = NULL;      //!< 同步时钟
  *  EXTERNAL VARIABLES
  */
 extern sem_t EvtDataRecv;
-extern I2C_Handle i2cHandle;
 extern Display_Handle display;
 
 /*********************************************************************
@@ -104,41 +104,42 @@ void EventRecvHandle(uint_least8_t index)
     \return void
 
 */
-static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
+static void cc1310_EventGet(uint8_t* pdata, uint8_t num)
 {
     bool ret = true;
     uint32_t errstate;
     uint8_t datanum = num;
     uint8_t dataget = 0;
-
-    I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
-    uint32_t I2C_BASE = 0x40020000;// = hwAttrs->baseAddr;
+    uint32_t key;
+    uint32_t I2C_BASE = 0x40020000;
 
     /* Master RECEIVE of Multiple Data Bytes */
-
+    key = HwiP_disable();
     /* Write Slave Address to I2CMSA, receive mode */
     I2CMasterSlaveAddrSet( I2C_BASE,                \
                            CC1310_ADDR,             \
                            true);  ///< true - I2C read
-
     /* Write ---01011 to I2C_O_MCS */
     I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_START);
 
     /* wait until no busy & no error */
+    while((HWREG(I2C_BASE + I2C_O_MCS) & I2C_MCS_ADRACK));
     while(I2CMasterBusy(I2C_BASE) == true);
     errstate = I2CMasterErr(I2C_BASE);
 
     if(errstate == I2C_MASTER_ERR_NONE){
         /* read one byte from I2CMDR */
-        *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
+        *pdata = I2CMasterDataGet(I2C_BASE);
         dataget++;
     }
+    while((HWREG(I2C_BASE + I2C_O_MCS) & I2C_MCS_ACK));
 
     while( dataget!= (datanum-1) && datanum!=1 ){
+
         /* Write ---01001 to I2CMCS */
         I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_RECEIVE_CONT);
-
         /* wait until no busy & no error */
+        while((HWREG(I2C_BASE + I2C_O_MCS) & I2C_MCS_ACK));
         while(I2CMasterBusy(I2C_BASE) == true);
         errstate = I2CMasterErr(I2C_BASE);
 
@@ -146,33 +147,22 @@ static void cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
             /* read one byte from I2CMDR */
             *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
             dataget++;
-        }else
-            goto errorServ;
+        }
     }
 
+    while((HWREG(I2C_BASE + I2C_O_MCS) & I2C_MCS_ACK));
     /* Write ---00101 to I2CMCS */
     I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_FINISH);
-    /* wait until no busy & no error */
-    while(I2CMasterBusy(I2C_BASE) == true);
-    errstate = I2CMasterErr(I2C_BASE);
 
+    /* wait until no busy & no error */
+    while((HWREG(I2C_BASE + I2C_O_MCS) & I2C_MCS_ERROR));
+    while(I2CMasterBusy(I2C_BASE) == true);
     if(errstate == I2C_MASTER_ERR_NONE){
         /* read one byte from I2CMDR */
         *(pdata+dataget) = I2CMasterDataGet(I2C_BASE);
-    }else
-        goto errorServ;
-
-errorServ:
-    if( errstate&I2C_MCS_ARBLST ){
-        /* Write ---0-100 to I2CMCS */
-        I2CMasterControl(I2C_BASE,I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
-        ret = false;
     }
-    else
-        ret = false;
 
-
-     return ret;
+    HwiP_restore(key);
 }
 
 /*!
@@ -196,6 +186,8 @@ static uint32_t Eventbacktracking(uint32_t Tror, uint32_t Tsor)
 /*********************************************************************
  *  FUNCTIONS
  */
+
+
 
 void SyncTask(uint32_t arg0, uint32_t arg1)
 {
@@ -223,7 +215,7 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         sem_wait(&EvtDataRecv);
 
         /* I2C 读取事件标签 */
-        cc1310_EventGet(i2cHandle,I2C_BUFF,3);
+        cc1310_EventGet(I2C_BUFF,4);
         //memcpy(&Tror, (uint8_t*)&I2C_BUFF[1],4);
         //memcpy(&Tsor, (uint8_t*)&I2C_BUFF[5],4);
         //type = I2C_BUFF[9];
@@ -231,7 +223,7 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         /* 事件标签时间戳回溯 */
         //Troc = Eventbacktracking(Tror,Tsor);
 
-        Display_printf(display, 0, 0, "Receive %x,%x,%x \n\r",I2C_BUFF[0],I2C_BUFF[1],I2C_BUFF[2]);
+        Display_printf(display, 0, 0, "Receive %x,%x,%x,%x \n\r",I2C_BUFF[0],I2C_BUFF[1],I2C_BUFF[2],I2C_BUFF[3]);
 
 
     }
