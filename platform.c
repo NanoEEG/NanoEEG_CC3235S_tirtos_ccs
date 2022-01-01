@@ -564,8 +564,6 @@ void mainThread(void *pvParameters)
     pthread_attr_t      pAttrs_spawn;
     struct sched_param  priParam;
 
-    Timer_Params timerparams;
-
     /* Initial all the Peripherals */
     GPIO_init();
     SPI_init(); //[DANGER] never delete it because NWP need to communicate with AP by SPI
@@ -587,11 +585,12 @@ void mainThread(void *pvParameters)
     I2C_Handle i2cHandle = I2C_open(COMMON_I2C, &params);
 
     /* SampleTime work as the system timestamp */
+    Timer_Params timerparams;
     pSampleTime = SampleTimestamp_Service_Init(&timerparams);
 
     /* Initial ads1299 */
-    //ADS1299_Init(0);
-    //ADS1299_Mode_Config(1); //!< set ads1299 mode as EEG ACQ for default
+    ADS1299_Init(0);
+    ADS1299_Mode_Config(1); //!< set ads1299 mode as EEG ACQ for default
 
     /* Initial bq25895 */
     if(!BQ25895_init(i2cHandle))
