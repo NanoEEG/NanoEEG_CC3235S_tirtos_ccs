@@ -582,7 +582,7 @@ void mainThread(void *pvParameters)
     I2C_Params_init(&params);
     params.bitRate = I2C_400kHz;
     // Open I2C bus for usage
-    I2C_Handle i2cHandle = I2C_open(COMMON_I2C, &params);
+    i2cHandle = I2C_open(COMMON_I2C, &params);
 
     /* SampleTime work as the system timestamp */
     Timer_Params timerparams;
@@ -590,7 +590,7 @@ void mainThread(void *pvParameters)
 
     /* Initial ads1299 */
     ADS1299_Init(0);
-    ADS1299_Mode_Config(1); //!< set ads1299 mode as EEG ACQ for default
+    ADS1299_Mode_Config(EEG_ACQ); //!< set ads1299 mode as EEG ACQ for default
 
     /* Initial bq25895 */
     if(!BQ25895_init(i2cHandle))

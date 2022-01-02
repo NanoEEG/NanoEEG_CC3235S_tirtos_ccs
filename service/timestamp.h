@@ -40,6 +40,6 @@ typedef struct
  */
 /* 时间戳服务 */
 SampleTime_t* SampleTimestamp_Service_Init(Timer_Params *params);
-
+void SampleTimestamp_Reset(SampleTime_t* SampleTime);
 
 #endif /* SERVICE_TIMESTAMP_H_ */

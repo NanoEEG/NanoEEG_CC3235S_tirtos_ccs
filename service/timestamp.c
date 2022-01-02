@@ -15,16 +15,40 @@
 #include "timestamp.h"
 #include "ti_drivers_config.h"
 
+/* Driverlib header files */
+#include <ti/devices/cc32xx/inc/hw_types.h>
+#include <ti/devices/cc32xx/inc/hw_memmap.h>
+#include <ti/devices/cc32xx/inc/hw_timer.h>
+#include <ti/devices/cc32xx/driverlib/timer.h>
+
+
 /*******************************************************************
  *  LOCAL VARIABLES
  */
-static SampleTime_t SampleTime;
+static SampleTime_t SampleTime; //传递该对象地址到应用层
+
+/*******************************************************************
+ *  Callback
+ */
+
+/*!
+    \brief SampleTimerCB
+
+    每样本时间戳溢出中断回调,由Timer溢出中断触发的回调
+
+    \param  handle - 定时器对象
+
+    \return NULL
+ */
+static void SampleTimerCB(Timer_Handle handle, int_fast16_t status)
+{
+    SampleTime.BaseTime_10us += 4000000;
+}
+
 
 /*******************************************************************
  *  FUNCTIONS
  */
-
-static void SampleTimerCB(Timer_Handle handle, int_fast16_t status);
 
 /*!
      \brief SampleTimestamp_Service_Init
@@ -60,15 +84,23 @@ SampleTime_t* SampleTimestamp_Service_Init(Timer_Params *params)
 }
 
 /*!
-    \brief SampleTimerCB
+     \brief SampleTimestamp_Reset
 
-    每样本时间戳溢出中断回调,由Timer溢出中断触发的回调
+     样本时间戳清零
 
-    \param  handle - 定时器对象
-
-    \return NULL
+     \return None
  */
-static void SampleTimerCB(Timer_Handle handle, int_fast16_t status)
-{
-    SampleTime.BaseTime_10us += 4000000;
+void SampleTimestamp_Reset(SampleTime_t* SampleTime){
+
+    // 清空时钟的值，TI Driver不支持，用driverlib实现
+    // pSampleTime->SampleTimer - Timer0
+    Timer_HWAttrs const *hwAttrs = SampleTime->SampleTimer->hwAttrs;
+    uint32_t TimerBase = hwAttrs->baseAddress;
+
+    TimerValueSet(TimerBase,TIMER_A,0x00);
+    TimerValueSet(TimerBase,TIMER_B,0x00);
+
+    SampleTime->LastSyncTime_10us = 0x00;
+
 }
+

@@ -59,7 +59,7 @@ static uint32_t         delay;
 static uint8_t          I2C_BUFF[16];
 
 Timer_Handle pSyncTime = NULL;      //!< 同步时钟
-extern Display_Handle display;
+uint32_t SyncTimerBase;
 
 /*********************************************************************
  *  EXTERNAL VARIABLES
@@ -68,6 +68,7 @@ extern sem_t UDPEvtDataReady;
 extern sem_t EvtDataRecv;
 extern SampleTime_t *pSampleTime;
 extern I2C_Handle i2cHandle;
+extern Display_Handle display;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -130,8 +131,8 @@ static bool cc1310_EventGet(I2C_Handle i2cHandle, uint8_t* pdata, uint8_t num)
     uint8_t dataget = 0;
     uint32_t key;
 
-    //I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
-    uint32_t I2C_BASE = 0x40020000;// = hwAttrs->baseAddr; //TODO bug
+    I2C_HWAttrs const *hwAttrs = i2cHandle->hwAttrs;
+    uint32_t I2C_BASE = hwAttrs->baseAddr;
 
     /* Master RECEIVE of Multiple Data Bytes */
      key = HwiP_disable();
@@ -230,6 +231,10 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
     params.timerCallback = SyncOutputHandle;
     // Open Timer instance
     pSyncTime = Timer_open(Sync_Timer, &params);
+
+    // 获取时钟基地址
+    Timer_HWAttrs const *hwAttrs = pSyncTime->hwAttrs;
+    SyncTimerBase = hwAttrs->baseAddress;
 
     /* Register interrupt for the CC1310_WAKEUP (cc1310 trigger) */
     GPIO_setCallback(CC1310_WAKEUP, EventRecvHandle);

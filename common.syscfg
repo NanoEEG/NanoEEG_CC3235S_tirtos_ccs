@@ -119,6 +119,7 @@ Timer1.timer.$assign = "Timer0";
 Timer2.$name             = "Sync_Timer";
 Timer2.timerType         = "32 Bits";
 Timer2.interruptPriority = "4";
+Timer2.timer.$assign     = "Timer1";
 
 Watchdog1.$name            = "CONFIG_WATCHDOG_0";
 Watchdog1.watchdog.$assign = "WATCHDOG0";
@@ -144,4 +145,3 @@ SlNet1.ifName = "CC32xx";
 I2C1.i2c.$suggestSolution        = "I2C0";
 I2C1.i2c.sdaPin.$suggestSolution = "ball.2";
 I2C1.i2c.sclPin.$suggestSolution = "ball.1";
-Timer2.timer.$suggestSolution    = "Timer1";
