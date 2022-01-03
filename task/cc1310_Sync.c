@@ -47,6 +47,7 @@
 #define RAT_SYNCNT      4000000
 #define CC3235_1SCNT    100000
 
+#define QUICKANSWER     4290967296
 
 /*********************************************************************
  *  GLOBAL VARIABLES
@@ -219,12 +220,12 @@ static uint32_t Eventbacktracking(SampleTime_t* pSampleTime, uint32_t Tror, uint
     uint32_t t = 0;
 
     if(Tror>Tsor || Tror==Tsor){
-        t = (Tror-Tsor)/(RAT_1SCNT);
+        t = (Tror - Tsor);
     }else
-        t = (Tsor + RAT_SYNCNT - INT_MAX - Tror)/(RAT_1SCNT);
+        t = (Tsor - QUICKANSWER - Tror);
 
 
-    ret = pSampleTime->LastSyncTime_10us + t*CC3235_1SCNT;
+    ret = pSampleTime->LastSyncTime_10us + t/40;
 
     return ret;
 }
