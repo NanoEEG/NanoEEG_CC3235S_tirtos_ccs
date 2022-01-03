@@ -40,6 +40,7 @@
 #include <ti/display/Display.h>
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/SPI.h>
+#include <ti/drivers/I2C.h>
 #include <ti/drivers/Timer.h>
 
 #include "ti_drivers_config.h"
@@ -52,9 +53,9 @@
 // User Services & tasks
 #include "platform.h"
 #include <attr/attrTbl.h>
-#include <task/cc1310_Sync.h>
 #include <service/timestamp.h>
 #include <service/ads1299.h>
+#include <service/bq25895.h>
 
 /********************************************************************************
  *  GLOBAL VARIABLES
@@ -67,17 +68,23 @@ pthread_t tcpThread = (pthread_t)NULL;
 pthread_t tcpworker_thread = (pthread_t)NULL;
 pthread_t udp1Thread = (pthread_t)NULL;
 pthread_t udp2Thread = (pthread_t)NULL;
+pthread_t SyncThread = (pthread_t)NULL;
 pthread_t ControlThread = (pthread_t)NULL;
 pthread_t SampleThread = (pthread_t)NULL;
+pthread_t DetectThread = (pthread_t)NULL;
 
-
+//!< I2C handle
+I2C_Handle i2cHandle = NULL;        //!< 系统中多个外设共用，在全局初始化
 //!< Driver handle
 Display_Handle display;
-//!< 系统时钟
-SampleTime_t *pSampleTime = NULL;
+//!< 时钟
+SampleTime_t *pSampleTime = NULL;   //!< 系统时钟对象（获取脑电数据样本时间戳，事件标签时间戳）
+
 //!< 信号量
-sem_t UDPDataReady;
+sem_t UDPEEGDataReady;
+sem_t UDPEvtDataReady;
 sem_t SampleReady;
+sem_t EvtDataRecv;
 
 /********************************************************************************
  *  EXTERNAL VARIABLES
@@ -91,9 +98,11 @@ extern SlDeviceVersion_t ver; //!< 仪器参数
 extern void tcpHandler(uint32_t arg0, uint32_t arg1);
 extern void tcpWorker(uint32_t arg0, uint32_t arg1);
 extern void udp1Worker(uint32_t arg0, uint32_t arg1);
-//extern void udp2Worker(uint32_t arg0, uint32_t arg1);
-extern void SampleTask(void* arg0 , void* arg1);
+extern void udp2Worker(uint32_t arg0, uint32_t arg1);
+extern void SampleTask(uint32_t arg0, uint32_t arg1);
 extern void controlTask(uint32_t arg0, uint32_t arg1);
+extern void SyncTask(uint32_t arg0, uint32_t arg1);
+extern void DetectTask(uint32_t arg0, uint32_t arg1);
 
 extern int32_t ti_net_SlNet_initConfig();
 
@@ -192,7 +201,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 pthread_attr_init(&pAttrs);
                 priParam.sched_priority = SOCKET_TASK_PRIORITY;
                 status = pthread_attr_setschedparam(&pAttrs, &priParam);
-                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
+                status |= pthread_attr_setstacksize(&pAttrs, UDP_TASK_STACK_SIZE);
                 status = pthread_create(&udp1Thread, &pAttrs, (void *(*)(void *))udp1Worker, (void*)UDP1PORT);
                 if(status)
                 {
@@ -227,19 +236,40 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                     printError("sample task create failed", status);
                 }
 
-//                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
-//                pthread_attr_init(&pAttrs);
-//                priParam.sched_priority = SOCKET_TASK_PRIORITY;
-//                status = pthread_attr_setschedparam(&pAttrs, &priParam);
-//                status |= pthread_attr_setstacksize(&pAttrs, TASK_STACK_SIZE);
-//                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
-//                if(status)
-//                {
-//                    printError("udp2Thread create failed", status);
-//                }
-//                // update EventDataPort Attr
-//                netparam.EventDataPort = UDP2PORT;
+                /*  udp2Thread with acess function udp2Worker to deal with event data transmission */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, UDP_TASK_STACK_SIZE);
+                status = pthread_create(&udp2Thread, &pAttrs, (void *(*)(void *))udp2Worker, (void*)UDP2PORT);
+                if(status)
+                {
+                    printError("udp2Thread create failed", status);
+                }
+                // update EventDataPort Attr
+                netparam.EvtdataPort = UDP2PORT;
 
+                /*  SyncThread with acess function SyncTask to deal with event Sync */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SAMPLE_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, SYNC_STACK_SIZE);
+                status = pthread_create(&SyncThread, &pAttrs, (void *(*)(void *))SyncTask, NULL);
+                if(status)
+                {
+                    printError("SyncThread create failed", status);
+                }
+
+                /*  DetectThread with acess function DetectTask to deal with device detectation */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, DETECT_STACK_SIZE);
+                status = pthread_create(&DetectThread, &pAttrs, (void *(*)(void *))DetectTask,  (void*)DETECTPORT);
+                if(status)
+                {
+                    printError("DetectThread create failed", status);
+                }
             }
             break;
         default:
@@ -546,12 +576,11 @@ void mainThread(void *pvParameters)
     pthread_attr_t      pAttrs_spawn;
     struct sched_param  priParam;
 
-    Timer_Params timerparams;
-
     /* Initial all the Peripherals */
     GPIO_init();
     SPI_init(); //[DANGER] never delete it because NWP need to communicate with AP by SPI
     Timer_init();
+    I2C_init();
 
     Display_init();
     display = Display_open(Display_Type_UART, NULL);
@@ -560,19 +589,33 @@ void mainThread(void *pvParameters)
         while(1);
     }
     
+    // initialize optional I2C bus parameters
+    I2C_Params params;
+    I2C_Params_init(&params);
+    params.bitRate = I2C_400kHz;
+    // Open I2C bus for usage
+    i2cHandle = I2C_open(COMMON_I2C, &params);
+
     /* SampleTime work as the system timestamp */
+    Timer_Params timerparams;
     pSampleTime = SampleTimestamp_Service_Init(&timerparams);
 
     /* Initial ads1299 */
     ADS1299_Init(0);
-    ADS1299_Mode_Config(1); //!< set ads1299 mode as EEG ACQ for default
+    ADS1299_Mode_Config(EEG_ACQ); //!< set ads1299 mode as EEG ACQ for default
+
+    /* Initial bq25895 */
+    if(!BQ25895_init(i2cHandle))
+        while(1);
 
     /* Initial AttrTbl */
     AttrTbl_Init();
 
     /* Initializes signals for all tasks */
-    sem_init(&UDPDataReady, 0, 0);
+    sem_init(&UDPEEGDataReady, 0, 0);
+    sem_init(&UDPEvtDataReady, 0, 0);
     sem_init(&SampleReady, 0, 0);
+    sem_init(&EvtDataRecv, 0, 0);
 
     /* led_green on to indicate all the drivers are ready */
     GPIO_write(LED_GREEN_GPIO,0);

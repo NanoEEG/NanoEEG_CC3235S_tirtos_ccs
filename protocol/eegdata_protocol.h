@@ -42,7 +42,7 @@
  */
 
 /*!
-    \brief    UDP帧头数据 结构体
+    \brief    UDP脑电数据通道 帧头数据结构体
 
     [DANFER]  本结构体内数据需通过属性表获取
  */
@@ -60,7 +60,7 @@
 } UDPHeader_t;
 
 /*!
-    \brief  UDP数据通道 数据帧数据域结构体 - 一个通道组（8通道）
+    \brief  UDP脑电数据通道 数据帧数据域结构体 - 一个通道组（8通道）
             本结构体定义UDP数据通道 数据帧数据域格式
  */
 #pragma pack(push)
@@ -83,20 +83,20 @@ typedef //union
    //uint8_t UDP_DTx_Buff[UDP_DTx_Buff_Size];
    struct
    {
-       /* 数据帧头部     - 23字节*/
-       UDPHeader_t sampleheader;
+       /* 数据帧头部     - 23字节 */
+       UDPHeader_t  sampleheader;
 
        /* 数据帧数据域 */
-       UDPData_t sampledata[UDP_SAMPLENUM];
+       UDPData_t    sampledata[UDP_SAMPLENUM];
 
    //} UDPframe;
-} UDPFrame_t;
+} UDPDtFrame_t;
 
 /**********************************************************************
  * FUNCTIONS
  */
 
-bool UDP_DataGet(uint8_t SampleIndex);
-bool UDP_DataProcess(SampleTime_t *pSampleTime,bool error);
+bool UDP_EEGDataGet(uint8_t SampleIndex);
+bool UDP_EEGDataProcess(SampleTime_t *pSampleTime,bool error);
 
 #endif  /* __EEGDATA_PROTOCOL_H */

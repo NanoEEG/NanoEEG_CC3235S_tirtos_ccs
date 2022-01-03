@@ -24,6 +24,13 @@
 #include <attr/attrTbl.h>
 #include <task/sample_task.h>
 
+/* Driverlib header files */
+#include <ti/devices/cc32xx/inc/hw_types.h>
+#include <ti/devices/cc32xx/inc/hw_memmap.h>
+#include <ti/devices/cc32xx/inc/hw_timer.h>
+#include <ti/devices/cc32xx/driverlib/timer.h>
+
+
 /*********************************************************************
  * GLOBAL VARIABLES
  */
@@ -35,6 +42,9 @@ mqd_t controlMQueue;                    //!< 消息队列
 extern SampleTime_t *pSampleTime;
 extern uint8_t eegSamplingState;
 extern Display_Handle display;
+
+extern Timer_Handle pSyncTime;
+extern uint32_t SyncTimerBase;
 
 /*********************************************************************
  *  Callbacks
@@ -83,6 +93,7 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
     switch(AttrChangeNum)
     {
         case SAMPLING:
+
             App_GetAttr(SAMPLING,pValue); //!< 获取属性值
 
             if(*(uint8_t*)pValue == SAMPLE_START )
@@ -92,6 +103,7 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
                     /* Failed to start timer */
                     while (1) {}
                 }
+                Timer_start(pSyncTime); //!< 使能同步时钟
 
                 eegSamplingState |= EEG_DATA_START_EVT; //!< 标识采样状态: 开始采样
 
@@ -101,6 +113,15 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
             }else
             {
                 Timer_stop(pSampleTime->SampleTimer); //!< 停止计时
+                Timer_stop(pSyncTime); //!< 停止同步时钟
+
+                // 清空时钟的值，TI Driver不支持，用driverlib实现，这里的处理不优雅
+                // pSampleTime->SampleTimer - Timer0
+                // pSyncTime - Timer1
+                SampleTimestamp_Reset(pSampleTime);
+
+                TimerValueSet(SyncTimerBase,TIMER_A,0x00);
+                TimerValueSet(SyncTimerBase,TIMER_B,0x00);
 
                 eegSamplingState |= EEG_STOP_EVT; //!< 标识采样状态
 
@@ -121,6 +142,7 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
 
         case CURGAIN:
             App_GetAttr(CURGAIN,pValue); //获取属性值
+
             if(!ADS1299_SetGain(0,*(uint8_t*)pValue)){
                 //TODO led 提示用户在此情况下不要尝试采集脑电信号
             }

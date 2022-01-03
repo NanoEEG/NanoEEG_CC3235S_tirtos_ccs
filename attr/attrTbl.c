@@ -37,7 +37,7 @@ SlDeviceVersion_t ver= {0};
 static bool     sampling;
 static bool     impMeas;
 static uint8_t  impMeas_mode;
-static float    impMeasval[16]; //TODO 读取该属性有bug会死机 尝试增大TCP_Tx_Buff_Size
+static float    impMeasval[16];
 
 /* 通信参数 */
 NETParam_t netparam;
@@ -50,7 +50,7 @@ static uint8_t curGain = GAIN_X24;
 static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
 
 /* 事件触发 */
-static uint16_t trig_delay = 1000; //TODO us为单位
+static uint16_t trig_delay = 0; //TODO us为单位
 
 /************************************************************************
  *  Attribute  Table
@@ -399,6 +399,10 @@ uint8_t App_GetAttr(uint8_t InsAttrNum, uint32_t *pValue)
         case CURGAIN:
             memcpy(pValue,&curGain,4);
             break;
+
+        case TRIGDELAY:
+            memcpy(pValue,&trig_delay,2);
+            break;
     }
   return ( ret );
 }
@@ -420,6 +424,9 @@ uint8_t App_WriteAttr(uint8_t InsAttrNum, uint8_t Value)
     {
         case SAMPLING:
             sampling=Value; //TODO 开关类型属性需要状态机实现
+            break;
+
+        case TRIGDELAY:
             break;
     }
   return ( ret );

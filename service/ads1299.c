@@ -16,6 +16,9 @@
 /* TI-DRIVERS Header files */
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/GPIO.h>
+
+#include <ti/devices/cc32xx/driverlib/utils.h>
+
 #include "ti_drivers_config.h"
 
 #include "ads1299.h"
@@ -32,7 +35,7 @@ SPI_Handle      masterSpi;
 
 static void ADS1299_Reset(uint8_t dev);
 static void ADS1299_PowerOn(uint8_t dev);
-static void WaitUs(int iWaitUs);
+static void WaitUs(unsigned long  iWaitUs);
 static void ADS1299_SendCommand(uint8_t command);
 static void ADS1299_WriteREG(uint8_t dev, uint8_t address, uint8_t value);
 static uint8_t ADS1299_ReadREG(uint8_t dev, uint8_t address);
@@ -55,7 +58,7 @@ static uint8_t ADS1299_ReadREG(uint8_t dev, uint8_t address);
  *     - None
  */
 /****************************************************************/
-static void WaitUs(int iWaitUs)
+static void WaitUs(unsigned long iWaitUs)
 {
     // delay 1us means 1*80/3 `= 27
     UtilsDelay(27*iWaitUs);
@@ -153,7 +156,7 @@ void ADS1299_SendCommand(uint8_t command)
     transferOK = SPI_transfer(masterSpi, &transaction);
     if (!transferOK)
     {
-        while(1);               // error
+      //  while(1);               // error
     }
 
     WaitUs(10);                 // Delay time, final SCLK falling edge to CS high
@@ -512,9 +515,9 @@ void ADS1299_Mode_Config(uint8_t Mode)
 
     switch (Mode)
   {
-        case 1://EEG_Acq
+        case EEG_ACQ://EEG_Acq
         {
-            ADS1299_WriteREG(0,ADS1299_REG_CONFIG1,0x96);
+            ADS1299_SetSamplerate(0,1000); // samplerate
             ADS1299_WriteREG(0,ADS1299_REG_CONFIG2,0xC0);
             ADS1299_WriteREG(0,ADS1299_REG_CONFIG3,0xEC);
 
@@ -533,22 +536,12 @@ void ADS1299_Mode_Config(uint8_t Mode)
 
             } while(ReadResult!=0x20);
 
-            for(i=0;i<8;i++)
-            {
-                // Default Gain = 24
-                do
-                {
-                    ADS1299_WriteREG(0,ADS1299_REG_CH1SET+i,0x60);
-                    WaitUs(20);
+            ADS1299_SetGain(0,24); // gain
 
-                    ReadResult = ADS1299_ReadREG(0,ADS1299_REG_CH1SET+i);
-                }
-                while(ReadResult!=0x60);
-            }
             break;
         }
 
-        case 2://IMP_Meas
+        case IMP_MEAS://IMP_Meas
         {
             ADS1299_WriteREG(1,ADS1299_REG_LOFF,0x09);              //[3:2]=00(6nA),01(24nA),10(6uA),11(24uA); [1:0]=01(7.8Hz),10(31.2Hz)
             ADS1299_WriteREG(1,ADS1299_REG_LOFFSENSN,0xFF);
