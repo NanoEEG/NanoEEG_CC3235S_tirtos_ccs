@@ -64,8 +64,6 @@ extern Display_Handle display;
 extern uint8_t *pTCP_Tx_Buff;
 extern uint8_t *pTCP_Rx_Buff;
 
-extern bool Detected;
-
 /*******************************************************************************
  *  EXTERNAL FUNCITONS
  */
@@ -89,8 +87,6 @@ void tcpWorker(uint32_t arg0, uint32_t arg1)
 
     Display_printf(display, 0, 0, "tcpWorker: start clientfd = 0x%x\n",
             clientfd);
-
-    Detected = true;
 
     while ((bytesRcvd = recv(clientfd, pTCP_Rx_Buff, TCP_Rx_Buff_Size, 0)) > 0)
     {

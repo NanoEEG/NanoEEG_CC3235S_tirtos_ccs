@@ -1,5 +1,4 @@
 /*
-/*
  * Copyright (c) 2015-2018, Texas Instruments Incorporated
  * All rights reserved.
  *
@@ -41,7 +40,6 @@
  */
 #include <string.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 /* BSD support */
 #include <netinet/in.h>
@@ -61,24 +59,16 @@
 #include <attr/attrTbl.h>
 
 /***********************************************************************
- *  MARCOS
- */
-#define REPLYMAX    3
-
-/***********************************************************************
  *  GLOBAL VARIABLES
  */
-bool Detected = false;
-
-uint8_t UDP_DetectedBuff[6];
 
 /***********************************************************************
  *  EXTERNAL VARIABLES
  */
 extern UDPEvtFrame_t UDP_EvtTX_Buff;    //!< UDP发送缓冲区
 extern sem_t UDPEvtDataReady;           //!< UDP脑电数据包完毕信号量
-extern NETParam_t netparam;             //!< 仪器网络参数
 extern Display_Handle display;
+
 /***********************************************************************
  * FUNCTIONS
  */
@@ -89,13 +79,9 @@ extern Display_Handle display;
  */
 void udp2Worker(uint32_t arg0, uint32_t arg1)
 {
-    int                bytesRcvd;
     int                bytesSent;
     int                status;
     int                server;
-    int                replycnt;
-    fd_set             readSet;
-    socklen_t          addrlen;
     struct sockaddr_in localAddr;
     struct sockaddr_in clientAddr;
 
@@ -124,52 +110,12 @@ void udp2Worker(uint32_t arg0, uint32_t arg1)
 
     while(1)
     {
-        //!< plumberhub 完成设备探测
-        if(Detected){
 
-            /* 等待信号量 */
-            sem_wait(&UDPEvtDataReady);
+        /* 等待信号量 */
+        sem_wait(&UDPEvtDataReady);
 
-            bytesSent = sendto(server, (uint8_t*)(&UDP_EvtTX_Buff),UDP_EvtTx_Buff_Size,0,
-                           (struct sockaddr*)&clientAddr,sizeof(SlSockAddr_t));
-        }else
-        {
-            /*
-             *  readSet and addrlen are value-result arguments, which must be reset
-             *  in between each select() and recvfrom() call
-             */
-            FD_ZERO(&readSet);
-            FD_SET(server, &readSet);
-            addrlen = sizeof(clientAddr);
-
-            /* Wait forever for the reply */
-            status = select(server + 1, &readSet, NULL, NULL, NULL);
-            if (status > 0) {
-
-                if (FD_ISSET(server, &readSet)) {
-                    bytesRcvd = recvfrom(server, UDP_DetectedBuff, 6, 0,
-                            (struct sockaddr *)&clientAddr, &addrlen);
-
-                    if(UDP_DetectedBuff[0]==0xCC && UDP_DetectedBuff[5]==0xC2){
-                        memcpy(&UDP_DetectedBuff[1],&(netparam.IP_Addr),4);
-                        UDP_DetectedBuff[0] = 0xC2;
-                        UDP_DetectedBuff[5] = 0xCC;
-                        replycnt ++;
-                    }
-
-                    if (bytesRcvd > 0 && replycnt < REPLYMAX) {
-                        bytesSent = sendto(server, UDP_DetectedBuff, 6, 0,
-                                (struct sockaddr *)&clientAddr, sizeof(SlSockAddr_t));
-
-                        if (bytesSent < 0 || bytesSent != bytesRcvd) {
-                            Display_printf(display, 0, 0,
-                                    "Error: sendto failed.\n");
-                            goto shutdown;
-                        }
-                    }
-                }
-            }
-        }
+        bytesSent = sendto(server, (uint8_t*)(&UDP_EvtTX_Buff),UDP_EvtTx_Buff_Size,0,
+                       (struct sockaddr*)&clientAddr,sizeof(SlSockAddr_t));
 
     }
 

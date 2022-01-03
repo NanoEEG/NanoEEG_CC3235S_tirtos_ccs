@@ -71,6 +71,7 @@ pthread_t udp2Thread = (pthread_t)NULL;
 pthread_t SyncThread = (pthread_t)NULL;
 pthread_t ControlThread = (pthread_t)NULL;
 pthread_t SampleThread = (pthread_t)NULL;
+pthread_t DetectThread = (pthread_t)NULL;
 
 //!< I2C handle
 I2C_Handle i2cHandle = NULL;        //!< 系统中多个外设共用，在全局初始化
@@ -101,6 +102,7 @@ extern void udp2Worker(uint32_t arg0, uint32_t arg1);
 extern void SampleTask(uint32_t arg0, uint32_t arg1);
 extern void controlTask(uint32_t arg0, uint32_t arg1);
 extern void SyncTask(uint32_t arg0, uint32_t arg1);
+extern void DetectTask(uint32_t arg0, uint32_t arg1);
 
 extern int32_t ti_net_SlNet_initConfig();
 
@@ -258,6 +260,16 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                     printError("SyncThread create failed", status);
                 }
 
+                /*  DetectThread with acess function DetectTask to deal with device detectation */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = SOCKET_TASK_PRIORITY;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, DETECT_STACK_SIZE);
+                status = pthread_create(&DetectThread, &pAttrs, (void *(*)(void *))DetectTask,  (void*)DETECTPORT);
+                if(status)
+                {
+                    printError("DetectThread create failed", status);
+                }
             }
             break;
         default:

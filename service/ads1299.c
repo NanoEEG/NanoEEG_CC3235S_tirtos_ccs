@@ -156,7 +156,7 @@ void ADS1299_SendCommand(uint8_t command)
     transferOK = SPI_transfer(masterSpi, &transaction);
     if (!transferOK)
     {
-        while(1);               // error
+      //  while(1);               // error
     }
 
     WaitUs(10);                 // Delay time, final SCLK falling edge to CS high

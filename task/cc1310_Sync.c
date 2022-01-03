@@ -71,11 +71,11 @@ extern I2C_Handle i2cHandle;
 extern Display_Handle display;
 
 /*********************************************************************
- * LOCAL FUNCTIONS
+ * Callback
  */
 
 /*!
-    \brief  Sync_Init
+    \brief  SyncOutputHandle
 
     This function is called when Sync_Timer overflows.
     In this design, we just toggle the CC1310_Sync_PWM. // TODO
@@ -110,6 +110,21 @@ static void EventRecvHandle(uint_least8_t index)
     /* 释放信号量 */
     sem_post(&EvtDataRecv);
 }
+
+#if (SyncTest)
+uint32_t TrigerTime;
+static void TrigerHandle(uint_least8_t index)
+{
+    TrigerTime = pSampleTime->BaseTime_10us + \
+            Timer_getCount(pSampleTime->SampleTimer)/800;
+}
+
+#endif
+
+
+/*********************************************************************
+ * LOCAL FUNCTIONS
+ */
 
 /*!
     \brief  cc1310_EventGet
@@ -240,6 +255,11 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
     GPIO_setCallback(CC1310_WAKEUP, EventRecvHandle);
     GPIO_enableInt(CC1310_WAKEUP);
 
+    #if (SyncTest)
+    GPIO_setCallback(Sync_Test, TrigerHandle);
+    GPIO_enableInt(Sync_Test);
+    #endif
+
     while(1){
 
         /* 等待信号量 */
@@ -258,7 +278,8 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         App_GetAttr(TRIGDELAY, &delay);
         UDP_DataProcess(Troc, delay, type);
 
-        Display_printf(display, 0, 0,"Tror %u. Tsor %u. type %x Troc %u.\r\n",Tror,Tsor,type,Troc);
+        Display_printf(display, 0, 0,"Tror %u. Tsor %u. type %x Troc %u. Ttoc %u. \r\n",\
+                       Tror,Tsor,type,Troc,TrigerTime);
 
         /* 释放信号量，发送事件标签给上位机 */
         sem_post(&UDPEvtDataReady);

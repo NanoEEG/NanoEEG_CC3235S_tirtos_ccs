@@ -18,7 +18,8 @@
 #define UDP_TASK_STACK_SIZE                   (1024)
 #define CONTROL_STACK_SIZE                    (1024)
 #define SAMPLE_STACK_SIZE                     (1024)
-#define SYNC_STACK_SIZE                       (2048)
+#define SYNC_STACK_SIZE                       (1024)
+#define DETECT_STACK_SIZE                     (1024)
 #define TASK_STACK_SIZE                       (4096)
 #define SLNET_IF_WIFI_PRIO                    (5)
 #define SLNET_IF_WIFI_NAME                    "CC3235S"
@@ -32,6 +33,7 @@
 #define TCPPORT                               (7001)                    
 #define UDP1PORT                              (7002)    // for eeg data                     
 #define UDP2PORT                              (7003)    // for event data                    
+#define DETECTPORT                            (7004)    // for detect
 
 /*******************************************************************
  * TYPEDEFS

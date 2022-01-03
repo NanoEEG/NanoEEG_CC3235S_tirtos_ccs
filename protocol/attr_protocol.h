@@ -28,7 +28,7 @@
 #define ATTR_ERR_RO                 0x01    //!< 属性不允许写操作
 #define ATTR_ERR_SIZE               0x02    //!< 待写数据长度与属性值长度不符
 #define ATTR_NOT_FOUND              0x03    //!< 待读写的属性不存在
-#define ATTR_NOT_FOUND              0x04    //!< 待读写的属性值非法  //TODO
+#define ATTR_VAL_INVALID            0x04    //!< 待读写的属性值非法  //TODO
 
 // 通讯收发缓冲区参数
 #define TCP_Rx_Buff_Size            16

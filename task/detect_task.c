@@ -31,7 +31,7 @@
  */
 
 /*
- *    ======== udp1_task.c ========
+ *    ======== detect_task.c ========
  *    Contains BSD sockets code.
  */
 
@@ -55,33 +55,35 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <protocol/eegdata_protocol.h>
+#include <attr/attrTbl.h>
+
+/***********************************************************************
+ *  GLOBAL VARIABLES
+ */
+uint8_t UDP_DetectedBuff[6];
 
 /***********************************************************************
  *  EXTERNAL VARIABLES
  */
-extern UDPDtFrame_t UDP_DTX_Buff;     //!< UDP发送缓冲区
-extern sem_t UDPEEGDataReady;       //!< UDP脑电数据包完毕信号量
-
+extern SlDeviceVersion_t ver;           //!< 仪器参数
 extern Display_Handle display;
 
 /***********************************************************************
  * FUNCTIONS
  */
-
-/*
- *  ======== udp1Handler ========
- *  Transmit EEG data via UDP1 channel
- *
- */
-void udp1Worker(uint32_t arg0, uint32_t arg1)
+void DetectTask(uint32_t arg0, uint32_t arg1)
 {
+    int                bytesRcvd;
+    int                bytesSent;
     int                status;
     int                server;
+    int                replycnt;
+    fd_set             readSet;
+    socklen_t          addrlen;
     struct sockaddr_in localAddr;
     struct sockaddr_in clientAddr;
 
-    Display_printf(display, 0, 0, "UDP1 data channel start\n");
+    Display_printf(display, 0, 0, "Detect Task start\n");
 
     server = socket(AF_INET, SOCK_DGRAM, 0);
     if (server == -1) {
@@ -101,16 +103,48 @@ void udp1Worker(uint32_t arg0, uint32_t arg1)
     }
 
     clientAddr.sin_family = AF_INET;
-    clientAddr.sin_port = htons(arg0); //脑电数据通道端口
-    clientAddr.sin_addr.s_addr = htonl(SL_IPV4_VAL(255,255,255,255)); //局域网广播
+    clientAddr.sin_port = htons(arg0);
+    clientAddr.sin_addr.s_addr = htonl(SL_IPV4_VAL(255,255,255,255));
 
     while(1)
     {
-        /* 等待信号量 */
-        sem_wait(&UDPEEGDataReady);
+        /*
+         *  readSet and addrlen are value-result arguments, which must be reset
+         *  in between each select() and recvfrom() call
+         */
+        FD_ZERO(&readSet);
+        FD_SET(server, &readSet);
+        addrlen = sizeof(clientAddr);
 
-        status = sendto(server, (uint8_t*)(&UDP_DTX_Buff),UDP_DTx_Buff_Size,0,
-                       (struct sockaddr*)&clientAddr,sizeof(SlSockAddr_t));
+        /* Wait forever for the reply */
+        status = select(server + 1, &readSet, NULL, NULL, NULL);
+        if (status > 0) {
+
+            if (FD_ISSET(server, &readSet)) {
+                bytesRcvd = recvfrom(server, UDP_DetectedBuff, 6, 0,
+                        (struct sockaddr *)&clientAddr, &addrlen);
+
+                if(UDP_DetectedBuff[0]==0xCC && UDP_DetectedBuff[5]==0xC2){
+                    memcpy(&UDP_DetectedBuff[1],&(ver.ChipId),4);
+                    UDP_DetectedBuff[0] = 0xC2;
+                    UDP_DetectedBuff[5] = 0xCC;
+                    replycnt ++;
+                }
+
+                if (bytesRcvd > 0 ) {
+                    bytesSent = sendto(server, UDP_DetectedBuff, 6, 0,
+                            (struct sockaddr *)&clientAddr, sizeof(SlSockAddr_t));
+
+                    if (bytesSent < 0 || bytesSent != bytesRcvd) {
+                        Display_printf(display, 0, 0,
+                                "Error: sendto failed.\n");
+                        goto shutdown;
+                    }
+                }
+            }
+        }
+
+
     }
 
 shutdown:
