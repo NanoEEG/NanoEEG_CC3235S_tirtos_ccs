@@ -52,6 +52,7 @@
 /*********************************************************************
  *  GLOBAL VARIABLES
  */
+static uint32_t         Ttor;
 static uint32_t         Tror;
 static uint32_t         Tsor;
 static uint32_t         Troc;
@@ -61,6 +62,7 @@ static uint8_t          I2C_BUFF[16];
 
 Timer_Handle pSyncTime = NULL;      //!< 同步时钟
 uint32_t SyncTimerBase;
+uint32_t TrigerTime;
 
 /*********************************************************************
  *  EXTERNAL VARIABLES
@@ -113,7 +115,7 @@ static void EventRecvHandle(uint_least8_t index)
 }
 
 #if (SyncTest)
-uint32_t TrigerTime;
+
 static void TrigerHandle(uint_least8_t index)
 {
     TrigerTime = pSampleTime->BaseTime_10us + \
@@ -267,11 +269,12 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         sem_wait(&EvtDataRecv);
 
         /* I2C 读取事件标签 */
-        cc1310_EventGet(i2cHandle,I2C_BUFF,10);
+        cc1310_EventGet(i2cHandle,I2C_BUFF,14);
 
-        memcpy(&Tror, &I2C_BUFF[1],4);
-        memcpy(&Tsor, &I2C_BUFF[5],4);
-        type = I2C_BUFF[9];
+        memcpy(&Ttor, &I2C_BUFF[1],4);
+        memcpy(&Tror, &I2C_BUFF[5],4);
+        memcpy(&Tsor, &I2C_BUFF[9],4);
+        type = I2C_BUFF[13];
 
         /* 事件标签时间戳回溯 */
         Troc = Eventbacktracking(pSampleTime,Tror,Tsor);
@@ -279,8 +282,10 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         App_GetAttr(TRIGDELAY, &delay);
         UDP_DataProcess(Troc, delay, type);
 
-        Display_printf(display, 0, 0,"Tror %u. Tsor %u. type %x Troc %u. Ttoc %u. \r\n",\
-                       Tror,Tsor,type,Troc,TrigerTime);
+        //Display_printf(display, 0, 0,"Ttor %u,Tror %u,Tsor %u,Tsoc %u,Troc %u,Ttoc %u",\
+                       Ttor,Tror,Tsor,pSampleTime->LastSyncTime_10us,Troc,TrigerTime);
+        Display_printf(display, 0, 0,"%u,%u,%u,%u,%u,%u",\
+                               Ttor,Tror,Tsor,pSampleTime->LastSyncTime_10us,Troc,TrigerTime);
 
         /* 释放信号量，发送事件标签给上位机 */
         sem_post(&UDPEvtDataReady);

@@ -116,8 +116,6 @@ static void AttrChangeProcess (uint8_t AttrChangeNum)
                 Timer_stop(pSyncTime); //!< 停止同步时钟
 
                 // 清空时钟的值，TI Driver不支持，用driverlib实现，这里的处理不优雅
-                // pSampleTime->SampleTimer - Timer0
-                // pSyncTime - Timer1
                 SampleTimestamp_Reset(pSampleTime);
 
                 TimerValueSet(SyncTimerBase,TIMER_A,0x00);

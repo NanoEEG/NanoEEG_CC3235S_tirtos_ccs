@@ -24,7 +24,7 @@ const GPIO5          = GPIO.addInstance();
 const GPIO6          = GPIO.addInstance();
 const GPIO7          = GPIO.addInstance();
 const GPIO8          = GPIO.addInstance();
-const GPIO11         = GPIO.addInstance();
+const GPIO9          = GPIO.addInstance();
 const I2C            = scripting.addModule("/ti/drivers/I2C", {}, false);
 const I2C1           = I2C.addInstance();
 const Power          = scripting.addModule("/ti/drivers/Power");
@@ -98,10 +98,9 @@ GPIO8.mode               = "Output";
 GPIO8.initialOutputState = "High";
 GPIO8.gpioPin.$assign    = "ball.8";
 
-GPIO11.$name            = "Sync_Test";
-GPIO11.interruptTrigger = "Falling Edge";
-GPIO11.pull             = "Pull Up";
-GPIO11.gpioPin.$assign  = "ball.53";
+GPIO9.$name            = "Sync_Test";
+GPIO9.interruptTrigger = "Falling Edge";
+GPIO9.gpioPin.$assign  = "ball.53";
 
 I2C1.$name = "COMMON_I2C";
 
