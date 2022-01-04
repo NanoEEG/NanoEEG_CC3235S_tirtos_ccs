@@ -50,7 +50,7 @@ static uint8_t curGain = GAIN_X24;
 static const uint8_t gain_tbl[]={GAIN_X1,GAIN_X2,GAIN_X4,GAIN_X6,GAIN_X8,GAIN_X24};
 
 /* 事件触发 */
-static uint16_t trig_delay = 0; //TODO us为单位
+static uint16_t trig_delay = 1808; //TODO 10us为单位
 
 /************************************************************************
  *  Attribute  Table

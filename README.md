@@ -14,4 +14,4 @@
 |	版本号	|	功能描述	| 版本贡献 |
 | :-------: | :-------	| :-------: |
 | Version1.0.0 | <br>**脑电采集基本功能**</br> <br>- 支持全局采样率修改</br> <br>- 支持全局增益修改</br> | gjmsilly |
-| Version1.0.1 | <br>**事件标签功能**</br> <br>- 事件标签子系统完成</br> <br>- 支持plumberhub设备探测</br> | gjmsilly |
+| Version1.1.0 | <br>**事件标签功能**</br> <br>- 事件标签子系统完成</br> <br>- 支持plumberhub设备探测</br> <br>- 添加空中传输固定延时</br> | gjmsilly |

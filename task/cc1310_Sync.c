@@ -56,7 +56,8 @@ static uint32_t         Tror;
 static uint32_t         Tsor;
 static uint32_t         Troc;
 static uint8_t          type;
-static uint32_t         delay;
+static uint16_t         delay;
+
 static uint8_t          I2C_BUFF[16];
 
 Timer_Handle pSyncTime = NULL;      //!< 同步时钟
@@ -111,17 +112,6 @@ static void EventRecvHandle(uint_least8_t index)
     /* 释放信号量 */
     sem_post(&EvtDataRecv);
 }
-
-#if (SyncTest)
-uint32_t TrigerTime;
-static void TrigerHandle(uint_least8_t index)
-{
-    TrigerTime = pSampleTime->BaseTime_10us + \
-            Timer_getCount(pSampleTime->SampleTimer)/800;
-}
-
-#endif
-
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -256,11 +246,6 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
     GPIO_setCallback(CC1310_WAKEUP, EventRecvHandle);
     GPIO_enableInt(CC1310_WAKEUP);
 
-    #if (SyncTest)
-    GPIO_setCallback(Sync_Test, TrigerHandle);
-    GPIO_enableInt(Sync_Test);
-    #endif
-
     while(1){
 
         /* 等待信号量 */
@@ -277,10 +262,8 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         Troc = Eventbacktracking(pSampleTime,Tror,Tsor);
         /* 协议封包 */
         App_GetAttr(TRIGDELAY, &delay);
+        //Display_printf(display, 0, 0,"delay: %u",delay);
         UDP_DataProcess(Troc, delay, type);
-
-        Display_printf(display, 0, 0,"Tror %u. Tsor %u. type %x Troc %u. Ttoc %u. \r\n",\
-                       Tror,Tsor,type,Troc,TrigerTime);
 
         /* 释放信号量，发送事件标签给上位机 */
         sem_post(&UDPEvtDataReady);
