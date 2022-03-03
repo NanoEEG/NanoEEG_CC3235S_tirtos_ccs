@@ -73,6 +73,13 @@ pthread_t ControlThread = (pthread_t)NULL;
 pthread_t SampleThread = (pthread_t)NULL;
 pthread_t DetectThread = (pthread_t)NULL;
 
+//!< 信号量
+sem_t UDPEEGDataReady;
+sem_t UDPEvtDataReady;
+sem_t SampleReady;
+sem_t EvtDataRecv;
+
+/* CC3235S片内外设 */
 //!< I2C handle
 I2C_Handle i2cHandle = NULL;        //!< 系统中多个外设共用，在全局初始化
 //!< Driver handle
@@ -80,11 +87,9 @@ Display_Handle display;
 //!< 时钟
 SampleTime_t *pSampleTime = NULL;   //!< 系统时钟对象（获取脑电数据样本时间戳，事件标签时间戳）
 
-//!< 信号量
-sem_t UDPEEGDataReady;
-sem_t UDPEvtDataReady;
-sem_t SampleReady;
-sem_t EvtDataRecv;
+/* 板载传感器对象 */
+
+
 
 /********************************************************************************
  *  EXTERNAL VARIABLES
