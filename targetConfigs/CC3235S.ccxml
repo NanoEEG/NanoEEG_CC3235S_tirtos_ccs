@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <configurations XML_version="1.2" id="configurations_0">
-                                                        
+                                                            
+    
     
     
     
@@ -15,7 +16,8 @@
     
     
     <configuration XML_version="1.2" id="Texas Instruments XDS110 USB Debug Probe_0">
-                                                                                                                
+                                                                                                                        
+        
         
         
         
@@ -29,7 +31,8 @@
         
         
         <instance XML_version="1.2" desc="Texas Instruments XDS110 USB Debug Probe_0" href="connections/TIXDS110_Connection.xml" id="Texas Instruments XDS110 USB Debug Probe_0" xml="TIXDS110_Connection.xml" xmlpath="connections"/>
-                                                                                                                
+                                                                                                                        
+        
         
         
         
@@ -43,7 +46,8 @@
         
         
         <connection XML_version="1.2" id="Texas Instruments XDS110 USB Debug Probe_0">
-                                                                                                                                                                        
+                                                                                                                                                                                    
+            
             
             
             
@@ -57,7 +61,8 @@
             
             
             <instance XML_version="1.2" href="drivers/tixds510icepick_c.xml" id="drivers" xml="tixds510icepick_c.xml" xmlpath="drivers"/>
-                                                                                                                                                                        
+                                                                                                                                                                                    
+            
             
             
             
@@ -71,7 +76,8 @@
             
             
             <instance XML_version="1.2" href="drivers/tixds510cs_dap.xml" id="drivers" xml="tixds510cs_dap.xml" xmlpath="drivers"/>
-                                                                                                                                                                        
+                                                                                                                                                                                    
+            
             
             
             
@@ -85,7 +91,8 @@
             
             
             <instance XML_version="1.2" href="drivers/tixds510cortexM.xml" id="drivers" xml="tixds510cortexM.xml" xmlpath="drivers"/>
-                                                                                                                                                                        
+                                                                                                                                                                                    
+            
             
             
             
@@ -99,37 +106,43 @@
             
             
             <property Type="choicelist" Value="1" id="The JTAG TCLK Frequency (MHz)">
-                                                                                                
+                                                                                                                
+                
                 
                 
                 
                 
                 <choice Name="Fixed with user specified value" value="SPECIFIC">
-                                                                                                                        
+                                                                                                                                            
+                    
                     
                     
                     
                     
                     <property Type="stringfield" Value="1MHz" id="-- Enter a value from 100.0kHz to 2.5MHz"/>
-                                                                                                                    
+                                                                                                                                        
+                
                 
                 
                 
                 
                 </choice>
-                                                                                            
+                                                                                                            
+            
             
             
             
             
             </property>
-                                                                        
+                                                                                    
+            
             
             
             
             
             <platform XML_version="1.2" id="platform_0">
-                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                
+                
                 
                 
                 
@@ -143,7 +156,8 @@
                 
                 
                 <instance XML_version="1.2" desc="CC3235S_0" href="devices/CC3235S.xml" id="CC3235S_0" xml="CC3235S.xml" xmlpath="devices"/>
-                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                            
+            
             
             
             
@@ -157,7 +171,8 @@
             
             
             </platform>
-                                                                                                                                                                    
+                                                                                                                                                                                
+        
         
         
         
@@ -171,7 +186,8 @@
         
         
         </connection>
-                                                                                                            
+                                                                                                                    
+    
     
     
     
@@ -185,7 +201,8 @@
     
     
     </configuration>
-                                                    
+                                                        
+
 
 
 
