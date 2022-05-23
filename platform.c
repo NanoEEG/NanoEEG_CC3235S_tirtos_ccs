@@ -72,6 +72,7 @@ pthread_t SyncThread = (pthread_t)NULL;
 pthread_t ControlThread = (pthread_t)NULL;
 pthread_t SampleThread = (pthread_t)NULL;
 pthread_t DetectThread = (pthread_t)NULL;
+pthread_t BatteryThread = (pthread_t)NULL;
 
 //!< I2C handle
 I2C_Handle i2cHandle = NULL;        //!< 系统中多个外设共用，在全局初始化
@@ -266,6 +267,16 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                 status = pthread_attr_setschedparam(&pAttrs, &priParam);
                 status |= pthread_attr_setstacksize(&pAttrs, DETECT_STACK_SIZE);
                 status = pthread_create(&DetectThread, &pAttrs, (void *(*)(void *))DetectTask,  (void*)DETECTPORT);
+                if(status)
+                {
+                    printError("DetectThread create failed", status);
+                }
+                /*  bq25895通知电源状态 */
+                pthread_attr_init(&pAttrs);
+                priParam.sched_priority = BATTERY_INDICATION;
+                status = pthread_attr_setschedparam(&pAttrs, &priParam);
+                status |= pthread_attr_setstacksize(&pAttrs, BATTERY_STACK_SIZE);
+                status = pthread_create(&BatteryThread, &pAttrs, (void *(*)(void *))BatteryInfoTask,  (void*)DETECTPORT);
                 if(status)
                 {
                     printError("DetectThread create failed", status);
