@@ -257,7 +257,7 @@ void SyncTask(uint32_t arg0, uint32_t arg1)
         memcpy(&Tror, &I2C_BUFF[1],4);
         memcpy(&Tsor, &I2C_BUFF[5],4);
         type = I2C_BUFF[9];
-
+        //Display_printf(display, 0, 0,"type: %x",type);
         /* 事件标签时间戳回溯 */
         Troc = Eventbacktracking(pSampleTime,Tror,Tsor);
         /* 协议封包 */

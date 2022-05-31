@@ -526,7 +526,7 @@ void ADS1299_Mode_Config(uint8_t Mode)
             ADS1299_WriteREG(0,ADS1299_REG_LOFFSENSN,0x00);
             ADS1299_WriteREG(0,ADS1299_REG_LOFFSENSP,0x00);
             ADS1299_WriteREG(0,ADS1299_REG_BIASSENSN,0x00);
-            ADS1299_WriteREG(0,ADS1299_REG_BIASSENSP,0x00);
+            ADS1299_WriteREG(0,ADS1299_REG_BIASSENSP,0xFF);
             do
             {
                 ADS1299_WriteREG(0,ADS1299_REG_MISC1,0x20);
